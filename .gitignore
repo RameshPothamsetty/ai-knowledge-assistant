@@ -1,0 +1,39 @@
+# Build output
+target/
+build/
+out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+
+# Local databases and uploads
+*.mv.db
+*.trace.db
+data/
+uploads/
+
+# Test and coverage output
+.surefire-reports/
+**/surefire-reports/
+coverage/
