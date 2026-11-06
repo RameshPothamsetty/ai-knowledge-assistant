@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/RameshPothamsetty/ai-knowledge-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/RameshPothamsetty/ai-knowledge-assistant/actions/workflows/ci.yml)
 
-A retrieval augmented generation (RAG) application that answers questions using **only** the documents you upload. Built with Java 21, Spring Boot 3.5, Spring Data JPA and a Thymeleaf UI.
+A retrieval augmented generation (RAG) application that answers questions using **only** the documents you upload. Built with Java 21, Spring Boot 3.5 and Spring Data JPA, with a React + Vite UI that compiles into the same jar.
 
 The whole pipeline runs offline by default — no API key, no external model, no network calls — while keeping the model layers behind interfaces so a hosted LLM can be plugged in later.
 
@@ -43,20 +43,33 @@ POST /api/ask ──► RagService ──► embed question ──► VectorSear
 | Retrieval | Cosine similarity over stored vectors | Portable, no extensions needed |
 | Embeddings | Local feature hashing (256 dims, L2 normalised) | Deterministic, offline, free |
 | Answering | Extractive answerer behind `LlmClient` | Demonstrates grounding without a key |
-| UI | Thymeleaf + vanilla JS | One deployable artefact |
+| UI | React 19 + Vite + TypeScript + Tailwind CSS | Typed against the API, still one deployable artefact |
 | DevOps | Docker (multi-stage), docker-compose, GitHub Actions | Reproducible build and CI |
 
 ## Quick start
 
-Requirements: JDK 21+, Maven 3.9+. Nothing else.
+Requirements: JDK 21+, Maven 3.9+, Node 20+.
 
 ```bash
 git clone https://github.com/RameshPothamsetty/ai-knowledge-assistant.git
 cd ai-knowledge-assistant
+npm --prefix frontend ci
+npm --prefix frontend run build   # writes the SPA into src/main/resources/static
 mvn spring-boot:run
 ```
 
-Open <http://localhost:8080>, paste some text, then ask a question about it. The H2 console is available at `/h2-console` (JDBC URL `jdbc:h2:mem:knowledge`, user `sa`, empty password).
+Open <http://localhost:8080>, add a document, then ask a question about it. The H2 console is available at `/h2-console` (JDBC URL `jdbc:h2:mem:knowledge`, user `sa`, empty password).
+
+The UI is a separate build so the backend stays a plain Maven project. Until `npm run build` has run, the jar serves the API but no page.
+
+### Frontend development
+
+```bash
+mvn spring-boot:run                 # API on :8080
+npm --prefix frontend run dev       # Vite on :5173, proxies /api to :8080
+```
+
+Open <http://localhost:5173> for hot reload. `npm --prefix frontend run typecheck` checks the UI without building it.
 
 ### With Docker
 
@@ -77,7 +90,10 @@ This starts PostgreSQL and the application on <http://localhost:8080>.
 | `GET` | `/api/documents/{id}` | Fetch one document |
 | `DELETE` | `/api/documents/{id}` | Delete a document and its chunks |
 | `POST` | `/api/ask` | Ask a question over the knowledge base |
+| `GET` | `/api/meta` | Active embedding model, chunking and top-k limits |
 | `GET` | `/actuator/health` | Health probe |
+
+Ingesting a document whose title **and** content already exist returns `409 Conflict`, so the same text cannot flood retrieval with duplicate chunks. A different title or different content is accepted.
 
 ### Example
 
@@ -156,6 +172,7 @@ The default `ExtractiveLlmClient` is deliberately honest: it selects the retriev
 - Similarity is computed in memory over all chunks. Fine for thousands of chunks, not for millions (pgvector is on the roadmap).
 - Only plain text and Markdown are accepted; PDF and DOCX need parsers.
 - One request at a time per answer: no streaming or conversation memory yet.
+- Chat history lives in the browser's `localStorage`, not in a database.
 
 ## Tests
 
@@ -163,7 +180,7 @@ The default `ExtractiveLlmClient` is deliberately honest: it selects the retriev
 mvn test
 ```
 
-41 tests, no network or API keys required:
+44 tests, no network or API keys required:
 
 | Suite | What it covers |
 | --- | --- |
@@ -171,10 +188,10 @@ mvn test
 | `HashingEmbeddingServiceTest` | determinism, unit norm, related-vs-unrelated ranking, stop words |
 | `EmbeddingCodecTest` | JSON round-trip and malformed payloads |
 | `VectorSearchServiceTest` | ranking, threshold filtering, top-k, cosine edge cases |
-| `DocumentServiceTest` | embed-and-persist, validation, cascade delete, listing |
+| `DocumentServiceTest` | embed-and-persist, validation, duplicate rejection, cascade delete, listing |
 | `RagServiceTest` | grounded answer, source metadata, no-context path, top-k clamping |
 | `ExtractiveLlmClientTest` | citation selection and deterministic output |
-| `KnowledgeApiIntegrationTest` | full MockMvc flow: ingest → ask → list → delete → 404 |
+| `KnowledgeApiIntegrationTest` | full MockMvc flow: ingest → ask → list → delete → 404, duplicate 409, upload paths, `/api/meta` |
 
 ## Project layout
 
@@ -187,8 +204,11 @@ src/main/java/com/ramesh/knowledge
 ├── search/       cosine similarity retrieval
 └── web/          home controller, JSON error handling
 src/main/resources
-├── application.yml
-└── templates/index.html
+└── application.yml
+frontend/            React + Vite SPA, built into src/main/resources/static
+├── src/components   sidebar, chat thread, answer card, source inspector
+├── src/api.ts       typed API client
+└── vite.config.ts   build target and dev proxy
 ```
 
 ## Documentation

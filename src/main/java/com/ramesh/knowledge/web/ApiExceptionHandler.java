@@ -1,5 +1,6 @@
 package com.ramesh.knowledge.web;
 
+import com.ramesh.knowledge.document.DuplicateDocumentException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -37,6 +38,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(NoSuchElementException exception) {
         return build(HttpStatus.NOT_FOUND, exception.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(DuplicateDocumentException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicate(DuplicateDocumentException exception) {
+        return build(HttpStatus.CONFLICT, exception.getMessage(), List.of());
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

@@ -25,7 +25,7 @@ Legend: `[x]` done, `[ ]` next.
 - [x] 14. Multipart upload for `.txt` and `.md`
 - [x] 15. Bean validation and a consistent JSON error body
 - [x] 16. `DELETE /api/documents/{id}` removing chunks first
-- [ ] 17. Reject duplicate documents (same title and content) with 409
+- [x] 17. Reject duplicate documents (same title and content) with 409
 - [ ] 18. Size guard for oversized documents with a 413 test
 - [ ] 19. Extract text from PDF uploads with Apache PDFBox
 - [ ] 20. Extract text from DOCX uploads
@@ -85,11 +85,11 @@ Legend: `[x]` done, `[ ]` next.
 - [x] 62. Thymeleaf page: add text, upload a file, list documents, ask
 - [x] 63. Render answer with sources, scores and latency
 - [ ] 64. Chunk preview drawer per document
-- [ ] 65. Question history persisted in localStorage
-- [ ] 66. Markdown rendering for answers with sanitisation
-- [ ] 67. Dark/light theme toggle
+- [x] 65. Question history persisted in localStorage
+- [x] 66. Markdown rendering for answers with sanitisation
+- [x] 67. Dark/light theme toggle
 - [ ] 68. Accessibility pass: focus states, aria labels, contrast
-- [ ] 69. Optional React + Vite frontend on the same API
+- [x] 69. Optional React + Vite frontend on the same API
 
 ## Phase 7 — Deployment and polish
 
@@ -103,4 +103,4 @@ Legend: `[x]` done, `[ ]` next.
 
 ---
 
-Progress: 32 / 76 complete.
+Progress: 37 / 76 complete.

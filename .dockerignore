@@ -11,3 +11,8 @@ target/
 README.md
 ROADMAP.md
 DEVLOG.md
+
+# Frontend dependencies and locally built assets
+frontend/node_modules/
+frontend/dist/
+src/main/resources/static/

@@ -1,6 +1,16 @@
 # syntax=docker/dockerfile:1
 
-# Stage 1: build the fat jar
+# Stage 1: build the single-page UI
+FROM node:24-alpine AS web
+WORKDIR /web
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN VITE_OUT_DIR=/out npm run build
+
+# Stage 2: build the fat jar with the UI inside it
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 
@@ -8,9 +18,10 @@ COPY pom.xml .
 RUN mvn -B -q dependency:go-offline
 
 COPY src ./src
+COPY --from=web /out ./src/main/resources/static
 RUN mvn -B -q package -DskipTests
 
-# Stage 2: small runtime image
+# Stage 3: small runtime image
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 

@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest a capability or an improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [ROADMAP.md](https://github.com/RameshPothamsetty/ai-knowledge-assistant/blob/main/ROADMAP.md) first — the idea may already be listed.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the user need, not the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including doing nothing, or the simpler option you rejected.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Ingestion / chunking
+        - Retrieval / scoring
+        - Answer generation
+        - REST API
+        - Web UI
+        - Build / CI / Docker
+        - Documentation
+        - Other
+    validations:
+      required: true

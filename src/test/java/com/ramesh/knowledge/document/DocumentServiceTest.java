@@ -92,6 +92,18 @@ class DocumentServiceTest {
     }
 
     @Test
+    void rejectsDuplicateTitleAndContentBeforeChunking() {
+        when(documentRepository.existsByTitleAndContent("Spring notes", "same body")).thenReturn(true);
+
+        assertThatThrownBy(() -> documentService.ingest("Spring notes", "same body", null))
+                .isInstanceOf(DuplicateDocumentException.class)
+                .hasMessageContaining("already exists");
+
+        verifyNoInteractions(chunkRepository);
+        verify(documentRepository, never()).save(any(KnowledgeDocument.class));
+    }
+
+    @Test
     void deletesChunksBeforeTheDocument() {
         when(documentRepository.existsById(3L)).thenReturn(true);
 

@@ -11,6 +11,8 @@ public interface KnowledgeDocumentRepository extends JpaRepository<KnowledgeDocu
 
     List<KnowledgeDocument> findAllByOrderByCreatedAtDesc();
 
+    boolean existsByTitleAndContent(String title, String content);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from KnowledgeDocument d where d.id = :id")
     void deleteById(@Param("id") Long id);

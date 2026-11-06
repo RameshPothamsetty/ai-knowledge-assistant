@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Roadmap and progress
+    url: https://github.com/RameshPothamsetty/ai-knowledge-assistant/blob/main/ROADMAP.md
+    about: The ordered task list, what is done and what comes next.
+  - name: API and setup documentation
+    url: https://github.com/RameshPothamsetty/ai-knowledge-assistant#readme
+    about: How to run the app, the endpoints and the configuration keys.

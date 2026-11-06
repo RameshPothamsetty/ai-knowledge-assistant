@@ -106,6 +106,34 @@ class KnowledgeApiIntegrationTest {
     }
 
     @Test
+    void rejectsDuplicateDocumentsWithConflict() throws Exception {
+        String content = "Tomato seedlings need six hours of direct sunlight and consistent watering.";
+
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Gardening Notes",
+                                "content", content))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Gardening Notes",
+                                "content", content))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value(containsString("already exists")));
+
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Gardening Notes, revised",
+                                "content", content))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
     void uploadsPlainTextFilesAndRejectsUnsupportedFormats() throws Exception {
         MockMultipartFile textFile = new MockMultipartFile(
                 "file", "notes.txt", "text/plain",
@@ -121,6 +149,16 @@ class KnowledgeApiIntegrationTest {
 
         mockMvc.perform(multipart("/api/documents/upload").file(pdfFile))
                 .andExpect(status().isUnsupportedMediaType());
+    }
+
+    @Test
+    void exposesTheRetrievalConfigurationUsedByTheUi() throws Exception {
+        mockMvc.perform(get("/api/meta"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.embeddingModel").value(not(emptyString())))
+                .andExpect(jsonPath("$.embeddingDimensions").value(256))
+                .andExpect(jsonPath("$.defaultTopK").value(4))
+                .andExpect(jsonPath("$.maxTopK").value(20));
     }
 
     @Test

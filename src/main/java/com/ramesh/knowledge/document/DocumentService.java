@@ -42,6 +42,10 @@ public class DocumentService {
         String cleanTitle = requireText(title, "title");
         String cleanContent = requireText(content, "content");
 
+        if (documentRepository.existsByTitleAndContent(cleanTitle, cleanContent)) {
+            throw new DuplicateDocumentException(cleanTitle);
+        }
+
         List<String> chunks = chunkingService.chunk(cleanContent);
         if (chunks.isEmpty()) {
             throw new IllegalArgumentException("content does not contain usable text");
