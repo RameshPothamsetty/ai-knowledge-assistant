@@ -8,6 +8,13 @@ export interface DocumentView {
   createdAt: string;
 }
 
+export interface ChunkView {
+  id: number;
+  chunkIndex: number;
+  content: string;
+  tokenCount: number;
+}
+
 export interface SourceSnippet {
   documentId: number;
   documentTitle: string;

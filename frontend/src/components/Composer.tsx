@@ -71,7 +71,7 @@ export function Composer({ onAsk, asking, topK, maxTopK, onTopKChange, documentC
                 ? 'Ask a question about your documents…'
                 : 'Add a document first, then ask a question…'
             }
-            className="max-h-40 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-relaxed outline-none placeholder:text-muted/70"
+            className="max-h-40 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-relaxed placeholder:text-muted"
           />
           <button
             type="submit"
@@ -96,7 +96,7 @@ export function Composer({ onAsk, asking, topK, maxTopK, onTopKChange, documentC
               <select
                 value={topK}
                 onChange={(event) => onTopKChange(Number(event.target.value))}
-                className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink focus:border-brand focus:outline-none"
+                className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[11px] text-ink focus:border-brand"
                 aria-label="Number of passages to retrieve"
               >
                 {Array.from({ length: Math.max(1, maxTopK) }, (_, index) => index + 1).map((count) => (

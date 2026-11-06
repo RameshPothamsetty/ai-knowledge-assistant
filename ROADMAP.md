@@ -84,11 +84,11 @@ Legend: `[x]` done, `[ ]` next.
 
 - [x] 62. Thymeleaf page: add text, upload a file, list documents, ask
 - [x] 63. Render answer with sources, scores and latency
-- [ ] 64. Chunk preview drawer per document
+- [x] 64. Chunk preview drawer per document
 - [x] 65. Question history persisted in localStorage
 - [x] 66. Markdown rendering for answers with sanitisation
 - [x] 67. Dark/light theme toggle
-- [ ] 68. Accessibility pass: focus states, aria labels, contrast
+- [x] 68. Accessibility pass: focus states, aria labels, contrast
 - [x] 69. Optional React + Vite frontend on the same API
 
 ## Phase 7 — Deployment and polish
@@ -103,4 +103,4 @@ Legend: `[x]` done, `[ ]` next.
 
 ---
 
-Progress: 37 / 76 complete.
+Progress: 39 / 76 complete.

@@ -89,7 +89,7 @@ export function PasteDialog({ open, busy, onClose, onSubmit }: PasteDialogProps)
           onChange={(event) => setTitle(event.target.value)}
           maxLength={200}
           placeholder="Refund policy"
-          className="mt-1 w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm placeholder:text-muted/70 focus:border-brand focus:outline-none"
+          className="mt-1 w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm placeholder:text-muted focus:border-brand"
         />
 
         <label htmlFor="paste-doc-content" className="mt-3 block text-xs font-medium text-muted">
@@ -102,13 +102,17 @@ export function PasteDialog({ open, busy, onClose, onSubmit }: PasteDialogProps)
           rows={8}
           maxLength={200_000}
           placeholder="Paste the text you want to make searchable…"
-          className="mt-1 max-h-[40vh] w-full resize-y rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm leading-relaxed placeholder:text-muted/70 focus:border-brand focus:outline-none"
+          className="mt-1 max-h-[40vh] w-full resize-y rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm leading-relaxed placeholder:text-muted focus:border-brand"
         />
         <p className="mt-1 text-right text-[11px] text-muted">
           {content.length.toLocaleString()} / 200,000 characters
         </p>
 
-        {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+        {error && (
+          <p role="alert" className="mt-2 text-xs text-danger">
+            {error}
+          </p>
+        )}
 
         <div className="mt-4 flex items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>

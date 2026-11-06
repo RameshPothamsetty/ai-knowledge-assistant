@@ -1,5 +1,6 @@
 package com.ramesh.knowledge.document;
 
+import com.ramesh.knowledge.document.dto.ChunkView;
 import com.ramesh.knowledge.document.dto.CreateDocumentRequest;
 import com.ramesh.knowledge.document.dto.DocumentView;
 import jakarta.validation.Valid;
@@ -81,6 +82,11 @@ public class DocumentController {
     @GetMapping("/{id}")
     public DocumentView get(@PathVariable Long id) {
         return documentService.get(id);
+    }
+
+    @GetMapping("/{id}/chunks")
+    public List<ChunkView> chunks(@PathVariable Long id) {
+        return documentService.chunks(id);
     }
 
     @DeleteMapping("/{id}")

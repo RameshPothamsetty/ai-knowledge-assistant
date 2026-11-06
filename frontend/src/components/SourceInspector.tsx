@@ -14,6 +14,7 @@ export function SourceInspector({ source, onClose }: SourceInspectorProps) {
   const percent = scorePercent(source.score);
 
   useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     closeButton.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -26,6 +27,7 @@ export function SourceInspector({ source, onClose }: SourceInspectorProps) {
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
     };
     // onClose is stable enough for this sheet; re-running would steal focus.
     // eslint-disable-next-line react-hooks/exhaustive-deps

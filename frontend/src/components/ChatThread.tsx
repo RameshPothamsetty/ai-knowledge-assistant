@@ -120,7 +120,7 @@ export function ChatThread({
               <div className="flex justify-end">
                 <div className="max-w-[88%] rounded-2xl rounded-br-md bg-brand px-4 py-2.5 text-sm text-brand-ink shadow-sm">
                   <p className="whitespace-pre-wrap">{message.question}</p>
-                  <p className="mt-1 text-right text-[10px] opacity-70">{formatTime(message.createdAt)}</p>
+                  <p className="mt-1 text-right text-[10px] opacity-90">{formatTime(message.createdAt)}</p>
                 </div>
               </div>
               <div className="mt-3">

@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Cpu, PanelLeftOpen, Trash2 } from 'lucide-react';
 import { api } from './api';
-import type { ChatMessage, SourceSnippet } from './types';
+import type { ChatMessage, DocumentView, SourceSnippet } from './types';
 import { newId } from './lib/utils';
 import { loadThread, saveThread } from './lib/storage';
+import { ChunkDrawer } from './components/ChunkDrawer';
 import { Sidebar } from './components/Sidebar';
 import { ChatThread } from './components/ChatThread';
 import { Composer } from './components/Composer';
@@ -31,6 +32,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [inspector, setInspector] = useState<SourceSnippet | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<DocumentView | null>(null);
   const [topK, setTopK] = useState<number | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -109,8 +111,11 @@ export default function App() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.deleteDocument(id),
-    onSuccess: () => {
+    onSuccess: (_result, id) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
+      if (previewDocument?.id === id) {
+        setPreviewDocument(null);
+      }
       showToast('Document deleted');
     },
     onError: (error) => showToast(errorMessage(error), 'error'),
@@ -187,6 +192,10 @@ export default function App() {
         }}
         onUpload={handleUpload}
         onDelete={(id) => deleteMutation.mutate(id)}
+        onPreview={(document) => {
+          setPreviewDocument(document);
+          setSidebarOpen(false);
+        }}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -196,6 +205,8 @@ export default function App() {
             onClick={() => setSidebarOpen(true)}
             className="grid size-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-ink lg:hidden"
             aria-label="Open document library"
+            aria-expanded={sidebarOpen}
+            aria-controls="document-library"
           >
             <PanelLeftOpen className="size-4" />
           </button>
@@ -258,6 +269,10 @@ export default function App() {
       />
 
       {inspector && <SourceInspector source={inspector} onClose={() => setInspector(null)} />}
+
+      {previewDocument && (
+        <ChunkDrawer doc={previewDocument} onClose={() => setPreviewDocument(null)} />
+      )}
 
       {toast && (
         <div

@@ -3,6 +3,7 @@
 ## 2026-11-06
 
 - Rejected duplicate documents at ingestion: a matching title and content now returns `409 Conflict` before any chunk is embedded, with unit and MockMvc coverage; 44 tests passing.
+- Completed the UI phase: the library previews a document's stored chunks through the new `GET /api/documents/{id}/chunks`, and an accessibility pass added drawer focus and Escape handling, inert off-canvas sidebar content, higher contrast for small muted text and reduced-motion support; 47 tests passing.
 
 ## 2026-11-05
 

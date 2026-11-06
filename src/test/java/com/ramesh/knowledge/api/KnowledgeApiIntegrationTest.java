@@ -83,6 +83,30 @@ class KnowledgeApiIntegrationTest {
     }
 
     @Test
+    void exposesChunksForPreview() throws Exception {
+        MvcResult created = mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Chunk Preview Notes",
+                                "content", "First sentence about tomatoes. ".repeat(80)))))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        long documentId = readId(created);
+
+        mockMvc.perform(get("/api/documents/{id}/chunks", documentId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].chunkIndex").value(0))
+                .andExpect(jsonPath("$[0].content").value(not(emptyString())))
+                .andExpect(jsonPath("$[0].tokenCount").value(greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$[1].chunkIndex").value(1))
+                .andExpect(jsonPath("$[0].embedding").doesNotExist());
+
+        mockMvc.perform(get("/api/documents/{id}/chunks", 999_999))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void answersWithAHonestMessageWhenTheKnowledgeBaseIsEmpty() throws Exception {
         mockMvc.perform(post("/api/ask")
                         .contentType(MediaType.APPLICATION_JSON)

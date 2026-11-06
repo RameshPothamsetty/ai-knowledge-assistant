@@ -1,4 +1,4 @@
-import type { AnswerResponse, DocumentView, Meta } from './types';
+import type { AnswerResponse, ChunkView, DocumentView, Meta } from './types';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -85,6 +85,8 @@ export const api = {
     }
     return request<DocumentView>('/api/documents/upload', { method: 'POST', body });
   },
+
+  chunks: (id: number) => request<ChunkView[]>(`/api/documents/${id}/chunks`),
 
   deleteDocument: (id: number) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
 

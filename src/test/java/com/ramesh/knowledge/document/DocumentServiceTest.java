@@ -1,5 +1,6 @@
 package com.ramesh.knowledge.document;
 
+import com.ramesh.knowledge.document.dto.ChunkView;
 import com.ramesh.knowledge.document.dto.DocumentView;
 import com.ramesh.knowledge.embedding.EmbeddingCodec;
 import com.ramesh.knowledge.embedding.HashingEmbeddingService;
@@ -132,6 +133,29 @@ class DocumentServiceTest {
 
         assertThat(documentService.list()).extracting(DocumentView::title)
                 .containsExactly("Second", "First");
+    }
+
+    @Test
+    void returnsChunksInStoredOrder() {
+        KnowledgeDocument document = new KnowledgeDocument("Notes", "content", null, Instant.now());
+        DocumentChunk first = new DocumentChunk(document, 0, "first", "[]", 1);
+        DocumentChunk second = new DocumentChunk(document, 1, "second", "[]", 2);
+        when(documentRepository.existsById(7L)).thenReturn(true);
+        when(chunkRepository.findByDocumentIdOrderByChunkIndexAsc(7L)).thenReturn(List.of(first, second));
+
+        assertThat(documentService.chunks(7L))
+                .extracting(ChunkView::chunkIndex)
+                .containsExactly(0, 1);
+    }
+
+    @Test
+    void listingChunksOfAnUnknownDocumentFails() {
+        when(documentRepository.existsById(42L)).thenReturn(false);
+
+        assertThatThrownBy(() -> documentService.chunks(42L))
+                .isInstanceOf(NoSuchElementException.class);
+
+        verifyNoInteractions(chunkRepository);
     }
 
     @Test

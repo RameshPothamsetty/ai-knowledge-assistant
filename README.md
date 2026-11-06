@@ -88,6 +88,7 @@ This starts PostgreSQL and the application on <http://localhost:8080>.
 | `POST` | `/api/documents/upload` | Upload a `.txt` / `.md` file (multipart) |
 | `GET` | `/api/documents` | List documents, newest first |
 | `GET` | `/api/documents/{id}` | Fetch one document |
+| `GET` | `/api/documents/{id}/chunks` | Stored chunks in order, used by the preview drawer |
 | `DELETE` | `/api/documents/{id}` | Delete a document and its chunks |
 | `POST` | `/api/ask` | Ask a question over the knowledge base |
 | `GET` | `/api/meta` | Active embedding model, chunking and top-k limits |
@@ -180,7 +181,7 @@ The default `ExtractiveLlmClient` is deliberately honest: it selects the retriev
 mvn test
 ```
 
-44 tests, no network or API keys required:
+47 tests, no network or API keys required:
 
 | Suite | What it covers |
 | --- | --- |
@@ -188,10 +189,10 @@ mvn test
 | `HashingEmbeddingServiceTest` | determinism, unit norm, related-vs-unrelated ranking, stop words |
 | `EmbeddingCodecTest` | JSON round-trip and malformed payloads |
 | `VectorSearchServiceTest` | ranking, threshold filtering, top-k, cosine edge cases |
-| `DocumentServiceTest` | embed-and-persist, validation, duplicate rejection, cascade delete, listing |
+| `DocumentServiceTest` | embed-and-persist, validation, duplicate rejection, cascade delete, listing, chunk order |
 | `RagServiceTest` | grounded answer, source metadata, no-context path, top-k clamping |
 | `ExtractiveLlmClientTest` | citation selection and deterministic output |
-| `KnowledgeApiIntegrationTest` | full MockMvc flow: ingest → ask → list → delete → 404, duplicate 409, upload paths, `/api/meta` |
+| `KnowledgeApiIntegrationTest` | full MockMvc flow: ingest → ask → list → delete → 404, duplicate 409, chunk preview, upload paths, `/api/meta` |
 
 ## Project layout
 

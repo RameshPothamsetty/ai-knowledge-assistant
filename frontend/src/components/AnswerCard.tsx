@@ -49,7 +49,7 @@ export function AnswerCard({ message, onRetry, onOpenSource }: AnswerCardProps) 
       )}
 
       {message.status === 'failed' && (
-        <div className="mt-4 rounded-xl border border-danger/30 bg-danger-soft p-3">
+        <div role="alert" className="mt-4 rounded-xl border border-danger/30 bg-danger-soft p-3">
           <p className="flex items-start gap-2 text-sm text-danger">
             <CircleAlert className="mt-0.5 size-4 shrink-0" />
             {message.error ?? 'The request failed.'}

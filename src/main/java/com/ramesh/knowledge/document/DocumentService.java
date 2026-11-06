@@ -1,5 +1,6 @@
 package com.ramesh.knowledge.document;
 
+import com.ramesh.knowledge.document.dto.ChunkView;
 import com.ramesh.knowledge.document.dto.DocumentView;
 import com.ramesh.knowledge.embedding.EmbeddingCodec;
 import com.ramesh.knowledge.embedding.EmbeddingService;
@@ -76,6 +77,20 @@ public class DocumentService {
     public List<DocumentView> list() {
         return documentRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(DocumentView::from)
+                .toList();
+    }
+
+    /**
+     * Chunks in their original order, used by the UI to show how a document was
+     * split before it is retrieved.
+     */
+    @Transactional(readOnly = true)
+    public List<ChunkView> chunks(Long id) {
+        if (!documentRepository.existsById(id)) {
+            throw new NoSuchElementException("document " + id + " not found");
+        }
+        return chunkRepository.findByDocumentIdOrderByChunkIndexAsc(id).stream()
+                .map(ChunkView::from)
                 .toList();
     }
 
