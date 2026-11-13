@@ -48,6 +48,11 @@ class RateLimitIntegrationTest {
                 .andExpect(jsonPath("$.status").value(429))
                 .andExpect(jsonPath("$.message").value("too many questions, try again in a minute"));
 
+        mockMvc.perform(post("/api/ask/")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(question))
+                .andExpect(status().isTooManyRequests());
+
         mockMvc.perform(get("/api/documents"))
                 .andExpect(status().isOk());
     }

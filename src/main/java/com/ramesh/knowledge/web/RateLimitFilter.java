@@ -76,8 +76,20 @@ public class RateLimitFilter extends OncePerRequestFilter {
         objectMapper.writeValue(response.getWriter(), body);
     }
 
+    /**
+     * Matches the question paths with or without a trailing slash, so a client
+     * cannot slip past the limit by writing {@code /api/ask/}.
+     */
     static boolean isLimited(String path) {
-        return "/api/ask".equals(path) || "/api/ask/stream".equals(path);
+        if (path == null || path.isEmpty()) {
+            return false;
+        }
+        int end = path.length();
+        while (end > 1 && path.charAt(end - 1) == '/') {
+            end--;
+        }
+        String normalized = path.substring(0, end);
+        return "/api/ask".equals(normalized) || "/api/ask/stream".equals(normalized);
     }
 
     boolean allow(String client) {
