@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
@@ -15,7 +16,10 @@ import java.time.Instant;
  * the API report ingestion results without loading every chunk.
  */
 @Entity
-@Table(name = "knowledge_document")
+@Table(name = "knowledge_document",
+        // Listing and pagination both order by creation time, so the index keeps
+        // them from sorting the whole table once the library grows.
+        indexes = @Index(name = "idx_document_created_at", columnList = "created_at"))
 public class KnowledgeDocument {
 
     @Id

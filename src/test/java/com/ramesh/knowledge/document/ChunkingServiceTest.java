@@ -66,15 +66,46 @@ class ChunkingServiceTest {
 
     @Test
     void splitsOversizedSentenceOnWordBoundaries() {
-        String sentence = "knowledge ".repeat(60).trim();
+        // Distinct words, so the split is what is under test rather than dedup.
+        String sentence = java.util.stream.IntStream.range(0, 60)
+                .mapToObj(index -> "token" + index)
+                .collect(java.util.stream.Collectors.joining(" "));
 
         List<String> chunks = chunkingService.chunk(sentence);
 
         assertThat(chunks).hasSizeGreaterThan(1);
         assertThat(chunks).allSatisfy(chunk -> {
+            assertThat(chunk).isNotBlank();
             assertThat(chunk.length()).isLessThanOrEqualTo(80);
-            assertThat(chunk.split("\\s+")).allMatch("knowledge"::equals);
+            assertThat(chunk.split("\\s+")).allMatch(word -> word.startsWith("token"));
         });
+        assertThat(String.join(" ", chunks)).contains("token0").contains("token59");
+    }
+
+    @Test
+    void dropsRepeatedBoilerplateChunks() {
+        ChunkingService noOverlap = new ChunkingService(100, 0);
+        String boilerplate = "Confidential internal document. Do not distribute.";
+        String unique = "Tomato seedlings need six hours of direct sunlight and steady watering to grow well.";
+
+        List<String> chunks = noOverlap.chunk(boilerplate + " " + unique + " " + boilerplate);
+
+        assertThat(chunks).hasSize(2);
+        assertThat(chunks.stream().filter(chunk -> chunk.contains("Confidential")).count()).isEqualTo(1);
+        assertThat(chunks).anyMatch(chunk -> chunk.contains("Tomato seedlings"));
+    }
+
+    @Test
+    void treatsPunctuationAndCaseDifferencesAsTheSameBoilerplate() {
+        ChunkingService noOverlap = new ChunkingService(100, 0);
+        String first = "Confidential internal document. Do not distribute.";
+        String second = "CONFIDENTIAL internal document, do not distribute!";
+        String unique = "Tomato seedlings need six hours of direct sunlight and steady watering to grow well.";
+
+        List<String> chunks = noOverlap.chunk(first + " " + unique + " " + second);
+
+        assertThat(chunks.stream().filter(chunk -> chunk.toLowerCase().contains("confidential")).count())
+                .isEqualTo(1);
     }
 
     @Test

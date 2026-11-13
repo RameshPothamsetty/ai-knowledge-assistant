@@ -19,6 +19,14 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, Lo
     @Query("select c from DocumentChunk c")
     List<DocumentChunk> findAllWithDocument();
 
+    /**
+     * The same eager fetch as {@link #findAllWithDocument()} but restricted to
+     * one document, so a filtered question never scans the whole corpus.
+     */
+    @EntityGraph(attributePaths = "document")
+    @Query("select c from DocumentChunk c where c.document.id = :documentId")
+    List<DocumentChunk> findAllWithDocumentByDocumentId(@Param("documentId") Long documentId);
+
     List<DocumentChunk> findByDocumentIdOrderByChunkIndexAsc(Long documentId);
 
     @Query("select coalesce(sum(c.tokenCount), 0) from DocumentChunk c")

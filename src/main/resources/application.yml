@@ -7,6 +7,10 @@ spring:
       max-request-size: 4MB
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  jackson:
+    mapper:
+      # Accept length/tone in any case so "short" and "SHORT" behave the same.
+      accept-case-insensitive-enums: true
 
 server:
   port: ${SERVER_PORT:8080}
@@ -15,9 +19,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
+
+logging:
+  pattern:
+    # Correlation id from CorrelationIdFilter, so request logs stay linkable.
+    level: "%5p [%X{requestId:-no-request-id}]"
 
 app:
+  rate-limit:
+    requests-per-minute: 60
   rag:
     chunk-size: 800
     chunk-overlap: 120
@@ -26,6 +37,9 @@ app:
     embedding-dimensions: 256
     min-score: 0.05
     max-document-characters: 200000
+    # Share of the cosine score in the ranking blend; the remainder is BM25.
+    hybrid-weight: 0.75
+    vector-cache-size: 4096
 
 ---
 spring:

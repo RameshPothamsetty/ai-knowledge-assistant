@@ -1,12 +1,9 @@
 package com.ramesh.knowledge.embedding;
 
 import com.ramesh.knowledge.config.RagProperties;
+import com.ramesh.knowledge.text.Terms;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Dependency-free embedding model based on feature hashing ("the hashing
@@ -21,13 +18,6 @@ import java.util.regex.Pattern;
  */
 @Service
 public class HashingEmbeddingService implements EmbeddingService {
-
-    private static final Pattern TOKEN = Pattern.compile("[a-z0-9]+");
-    private static final Set<String> STOP_WORDS = Set.of(
-            "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has", "have",
-            "in", "is", "it", "its", "of", "on", "or", "that", "the", "this", "to", "was",
-            "were", "will", "with", "what", "which", "who", "how", "when", "where", "why"
-    );
 
     private final int dimensions;
 
@@ -46,17 +36,8 @@ public class HashingEmbeddingService implements EmbeddingService {
     @Override
     public float[] embed(String text) {
         float[] vector = new float[dimensions];
-        if (text == null || text.isBlank()) {
-            return vector;
-        }
-
-        Matcher matcher = TOKEN.matcher(text.toLowerCase());
         int terms = 0;
-        while (matcher.find()) {
-            String token = stem(matcher.group());
-            if (token.length() < 2 || STOP_WORDS.contains(token)) {
-                continue;
-            }
+        for (String token : Terms.of(text)) {
             int hash = token.hashCode();
             int index = Math.floorMod(hash, dimensions);
             float sign = ((hash >>> 16) & 1) == 0 ? 1f : -1f;
@@ -80,22 +61,6 @@ public class HashingEmbeddingService implements EmbeddingService {
             vector[i] *= scale;
         }
         return vector;
-    }
-
-    /**
-     * Very small suffix stripping so "documents" and "document" share a token.
-     */
-    private String stem(String token) {
-        if (token.length() > 4 && token.endsWith("ies")) {
-            return token.substring(0, token.length() - 3) + "y";
-        }
-        if (token.length() > 4 && (token.endsWith("ses") || token.endsWith("xes"))) {
-            return token.substring(0, token.length() - 2);
-        }
-        if (token.length() > 3 && token.endsWith("s") && !token.endsWith("ss")) {
-            return token.substring(0, token.length() - 1);
-        }
-        return token;
     }
 
     @Override

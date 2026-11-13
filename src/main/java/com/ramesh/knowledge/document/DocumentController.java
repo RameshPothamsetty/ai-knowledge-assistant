@@ -2,8 +2,10 @@ package com.ramesh.knowledge.document;
 
 import com.ramesh.knowledge.document.dto.ChunkView;
 import com.ramesh.knowledge.document.dto.CreateDocumentRequest;
+import com.ramesh.knowledge.document.dto.DocumentPage;
 import com.ramesh.knowledge.document.dto.DocumentView;
 import com.ramesh.knowledge.document.dto.KnowledgeBaseSummary;
+import com.ramesh.knowledge.document.dto.ReindexResult;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -79,6 +81,26 @@ public class DocumentController {
     @GetMapping("/summary")
     public KnowledgeBaseSummary summary() {
         return documentService.summary();
+    }
+
+    /**
+     * Newest-first page of documents for clients that cannot fetch the whole
+     * list. {@code GET /api/documents} remains unpaginated for the current UI.
+     */
+    @GetMapping("/page")
+    public DocumentPage page(@RequestParam(defaultValue = "0") int page,
+                             @RequestParam(defaultValue = "20") int size) {
+        return documentService.page(page, size);
+    }
+
+    /**
+     * Re-embeds and re-chunks every document, for example after changing the
+     * embedding model or chunking settings. Idempotent: running it twice leaves
+     * the same chunks.
+     */
+    @PostMapping("/reindex")
+    public ReindexResult reindex() {
+        return documentService.reindex();
     }
 
     @GetMapping("/{id}")

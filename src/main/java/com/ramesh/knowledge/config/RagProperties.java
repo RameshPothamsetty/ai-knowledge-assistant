@@ -12,6 +12,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param embeddingDimensions size of the local hashing embedding vectors
  * @param minScore            cosine similarity below which a chunk is considered irrelevant
  * @param maxDocumentCharacters largest amount of text a single document may contain
+ * @param hybridWeight        share of the cosine score in the ranking blend; the rest is BM25
+ * @param vectorCacheSize     maximum number of decoded chunk vectors kept in memory
  */
 @ConfigurationProperties(prefix = "app.rag")
 public record RagProperties(
@@ -21,6 +23,8 @@ public record RagProperties(
         int maxTopK,
         int embeddingDimensions,
         double minScore,
-        int maxDocumentCharacters
+        int maxDocumentCharacters,
+        double hybridWeight,
+        int vectorCacheSize
 ) {
 }

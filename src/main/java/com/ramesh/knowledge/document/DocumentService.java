@@ -2,10 +2,16 @@ package com.ramesh.knowledge.document;
 
 import com.ramesh.knowledge.config.RagProperties;
 import com.ramesh.knowledge.document.dto.ChunkView;
+import com.ramesh.knowledge.document.dto.DocumentPage;
 import com.ramesh.knowledge.document.dto.DocumentView;
 import com.ramesh.knowledge.document.dto.KnowledgeBaseSummary;
+import com.ramesh.knowledge.document.dto.ReindexResult;
 import com.ramesh.knowledge.embedding.EmbeddingCodec;
 import com.ramesh.knowledge.embedding.EmbeddingService;
+import com.ramesh.knowledge.search.VectorCache;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,22 +31,28 @@ public class DocumentService {
 
     private static final Pattern WORD = Pattern.compile("\\S+");
 
+    /** Upper bound for a single page of the document list. */
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final KnowledgeDocumentRepository documentRepository;
     private final DocumentChunkRepository chunkRepository;
     private final ChunkingService chunkingService;
     private final EmbeddingService embeddingService;
     private final RagProperties properties;
+    private final VectorCache vectorCache;
 
     public DocumentService(KnowledgeDocumentRepository documentRepository,
                            DocumentChunkRepository chunkRepository,
                            ChunkingService chunkingService,
                            EmbeddingService embeddingService,
-                           RagProperties properties) {
+                           RagProperties properties,
+                           VectorCache vectorCache) {
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
         this.chunkingService = chunkingService;
         this.embeddingService = embeddingService;
         this.properties = properties;
+        this.vectorCache = vectorCache;
     }
 
     public DocumentView ingest(String title, String content) {
@@ -74,17 +86,7 @@ public class DocumentService {
                 source == null ? 0 : source.sizeBytes(),
                 Instant.now()));
 
-        List<DocumentChunk> entities = new ArrayList<>(chunks.size());
-        for (int index = 0; index < chunks.size(); index++) {
-            String chunk = chunks.get(index);
-            entities.add(new DocumentChunk(
-                    document,
-                    index,
-                    chunk,
-                    EmbeddingCodec.encode(embeddingService.embed(chunk)),
-                    wordCount(chunk)
-            ));
-        }
+        List<DocumentChunk> entities = buildChunks(document, chunks);
         chunkRepository.saveAll(entities);
 
         document.setChunkCount(entities.size());
@@ -97,6 +99,50 @@ public class DocumentService {
         return documentRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(DocumentView::from)
                 .toList();
+    }
+
+    /**
+     * Newest-first page of documents. The unpaginated list stays for the current
+     * UI; this endpoint is what a large knowledge base should use.
+     */
+    @Transactional(readOnly = true)
+    public DocumentPage page(int page, int size) {
+        if (page < 0) {
+            throw new IllegalArgumentException("page must not be negative");
+        }
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("size must be between 1 and " + MAX_PAGE_SIZE);
+        }
+        Page<KnowledgeDocument> result = documentRepository.findAll(
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        return new DocumentPage(
+                result.getContent().stream().map(DocumentView::from).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages());
+    }
+
+    /**
+     * Rebuilds every chunk from the stored document text, which is what a
+     * change to the embedding model or chunking settings requires. Documents keep
+     * their ids and metadata; only their chunks are replaced.
+     */
+    @Transactional
+    public ReindexResult reindex() {
+        long startedAt = System.nanoTime();
+        List<KnowledgeDocument> documents = documentRepository.findAll();
+        long chunks = 0;
+        for (KnowledgeDocument document : documents) {
+            chunkRepository.deleteByDocumentId(document.getId());
+            List<DocumentChunk> entities = buildChunks(document, chunkingService.chunk(document.getContent()));
+            chunkRepository.saveAll(entities);
+            document.setChunkCount(entities.size());
+            documentRepository.save(document);
+            chunks += entities.size();
+        }
+        vectorCache.clear();
+        return new ReindexResult(documents.size(), chunks, (System.nanoTime() - startedAt) / 1_000_000);
     }
 
     /**
@@ -140,6 +186,22 @@ public class DocumentService {
         }
         chunkRepository.deleteByDocumentId(id);
         documentRepository.deleteById(id);
+        vectorCache.evictDocument(id);
+    }
+
+    private List<DocumentChunk> buildChunks(KnowledgeDocument document, List<String> chunks) {
+        List<DocumentChunk> entities = new ArrayList<>(chunks.size());
+        for (int index = 0; index < chunks.size(); index++) {
+            String chunk = chunks.get(index);
+            entities.add(new DocumentChunk(
+                    document,
+                    index,
+                    chunk,
+                    EmbeddingCodec.encode(embeddingService.embed(chunk)),
+                    wordCount(chunk)
+            ));
+        }
+        return entities;
     }
 
     private String requireText(String value, String field) {

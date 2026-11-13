@@ -5,7 +5,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -19,6 +22,7 @@ public class ChunkingService {
 
     private static final Pattern UNIT_SPLIT = Pattern.compile("(?<=[.!?])\\s+|\\R+");
     private static final Pattern INLINE_WHITESPACE = Pattern.compile("[ \\t\\x0B\\f]+");
+    private static final Pattern DUPLICATE_KEY = Pattern.compile("[^a-z0-9]+");
 
     private final int chunkSize;
     private final int chunkOverlap;
@@ -53,6 +57,7 @@ public class ChunkingService {
         }
 
         List<String> chunks = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
         StringBuilder current = new StringBuilder();
 
         for (String unit : units) {
@@ -60,7 +65,7 @@ public class ChunkingService {
             for (String piece : pieces) {
                 if (current.length() > 0 && current.length() + 1 + piece.length() > chunkSize) {
                     String finished = current.toString();
-                    addChunk(chunks, finished);
+                    addChunk(chunks, seen, finished);
                     current = new StringBuilder(overlapTail(finished));
                     if (current.length() + 1 + piece.length() > chunkSize) {
                         // The carried overlap plus this piece would overflow, so the
@@ -77,7 +82,7 @@ public class ChunkingService {
                 current.append(piece);
             }
         }
-        addChunk(chunks, current.toString());
+        addChunk(chunks, seen, current.toString());
         return List.copyOf(chunks);
     }
 
@@ -135,12 +140,20 @@ public class ChunkingService {
         return pieces;
     }
 
-    private void addChunk(List<String> chunks, String candidate) {
+    /**
+     * Adds a chunk unless its text was already emitted. Repeated boilerplate —
+     * page footers, legal notices, navigation blocks — would otherwise produce
+     * several identical chunks that all compete for the same retrieval slot.
+     * Comparison ignores case and punctuation so formatting differences do not
+     * hide a duplicate.
+     */
+    private void addChunk(List<String> chunks, Set<String> seen, String candidate) {
         String trimmed = candidate.trim();
         if (trimmed.isEmpty()) {
             return;
         }
-        if (chunks.isEmpty() || !chunks.get(chunks.size() - 1).equals(trimmed)) {
+        String key = DUPLICATE_KEY.matcher(trimmed.toLowerCase(Locale.ROOT)).replaceAll(" ").trim();
+        if (seen.add(key)) {
             chunks.add(trimmed);
         }
     }

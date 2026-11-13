@@ -2,16 +2,25 @@ package com.ramesh.knowledge.document;
 
 import com.ramesh.knowledge.config.RagProperties;
 import com.ramesh.knowledge.document.dto.ChunkView;
+import com.ramesh.knowledge.document.dto.DocumentPage;
 import com.ramesh.knowledge.document.dto.DocumentView;
 import com.ramesh.knowledge.document.dto.KnowledgeBaseSummary;
+import com.ramesh.knowledge.document.dto.ReindexResult;
 import com.ramesh.knowledge.embedding.EmbeddingCodec;
 import com.ramesh.knowledge.embedding.HashingEmbeddingService;
+import com.ramesh.knowledge.search.VectorCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.List;
@@ -36,6 +45,9 @@ class DocumentServiceTest {
     @Mock
     private DocumentChunkRepository chunkRepository;
 
+    @Mock
+    private VectorCache vectorCache;
+
     private DocumentService documentService;
 
     @BeforeEach
@@ -45,7 +57,8 @@ class DocumentServiceTest {
                 chunkRepository,
                 new ChunkingService(120, 30),
                 new HashingEmbeddingService(64),
-                new RagProperties(800, 120, 4, 20, 256, 0.05, 200_000));
+                new RagProperties(800, 120, 4, 20, 256, 0.05, 200_000, 0.75, 4096),
+                vectorCache);
     }
 
     @Test
@@ -116,7 +129,8 @@ class DocumentServiceTest {
                 chunkRepository,
                 new ChunkingService(120, 30),
                 new HashingEmbeddingService(64),
-                new RagProperties(800, 120, 4, 20, 256, 0.05, 50));
+                new RagProperties(800, 120, 4, 20, 256, 0.05, 50, 0.75, 4096),
+                vectorCache);
 
         assertThatThrownBy(() -> limited.ingest("Big", "x".repeat(51)))
                 .isInstanceOf(DocumentTooLargeException.class)
@@ -142,6 +156,56 @@ class DocumentServiceTest {
 
         verify(chunkRepository).deleteByDocumentId(3L);
         verify(documentRepository).deleteById(3L);
+        verify(vectorCache).evictDocument(3L);
+    }
+
+    @Test
+    void reindexesEveryDocumentFromItsStoredText() {
+        KnowledgeDocument document = new KnowledgeDocument(
+                "Notes", "Spring Boot provides auto configuration. ".repeat(12), null, "text/plain", 7, Instant.now());
+        ReflectionTestUtils.setField(document, "id", 7L);
+        when(documentRepository.findAll()).thenReturn(List.of(document));
+        when(documentRepository.save(any(KnowledgeDocument.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(chunkRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReindexResult result = documentService.reindex();
+
+        assertThat(result.documents()).isEqualTo(1);
+        assertThat(result.chunks()).isGreaterThan(1);
+        assertThat(result.durationMs()).isNotNegative();
+        assertThat(document.getChunkCount()).isEqualTo((int) result.chunks());
+        verify(chunkRepository).deleteByDocumentId(7L);
+        verify(vectorCache).clear();
+    }
+
+    @Test
+    void pagesDocumentsNewestFirst() {
+        KnowledgeDocument document = new KnowledgeDocument("First", "content", null, "text/plain", 7, Instant.now());
+        Pageable pageable = PageRequest.of(1, 2, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<KnowledgeDocument> page = new PageImpl<>(List.of(document), pageable, 5);
+        when(documentRepository.findAll(pageable)).thenReturn(page);
+
+        DocumentPage result = documentService.page(1, 2);
+
+        assertThat(result.page()).isEqualTo(1);
+        assertThat(result.size()).isEqualTo(2);
+        assertThat(result.totalElements()).isEqualTo(5);
+        assertThat(result.totalPages()).isEqualTo(3);
+        assertThat(result.items()).extracting(DocumentView::title).containsExactly("First");
+    }
+
+    @Test
+    void rejectsInvalidPageRequestsBeforeQuerying() {
+        assertThatThrownBy(() -> documentService.page(-1, 10))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("page");
+        assertThatThrownBy(() -> documentService.page(0, 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("size");
+        assertThatThrownBy(() -> documentService.page(0, 101))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verifyNoInteractions(documentRepository);
     }
 
     @Test
