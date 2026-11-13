@@ -149,8 +149,10 @@ export function Sidebar({
           >
             <UploadCloud className={cn('mx-auto mb-1.5 size-5', dragging ? 'text-brand' : 'text-muted')} />
             <p className="text-xs text-muted">
-              Drop a <span className="font-medium text-ink">.txt</span> or{' '}
-              <span className="font-medium text-ink">.md</span> file
+              Drop a <span className="font-medium text-ink">.txt</span>,{' '}
+              <span className="font-medium text-ink">.md</span>,{' '}
+              <span className="font-medium text-ink">.pdf</span> or{' '}
+              <span className="font-medium text-ink">.docx</span> file
             </p>
             <button
               type="button"
@@ -162,7 +164,7 @@ export function Sidebar({
             <input
               ref={fileInput}
               type="file"
-              accept=".txt,.md,.markdown"
+              accept=".txt,.md,.markdown,.pdf,.docx"
               className="hidden"
               onChange={(event) => {
                 const file = event.target.files?.[0];

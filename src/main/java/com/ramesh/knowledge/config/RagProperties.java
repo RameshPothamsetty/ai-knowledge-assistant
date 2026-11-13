@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param maxTopK             upper bound for the requested top-k value
  * @param embeddingDimensions size of the local hashing embedding vectors
  * @param minScore            cosine similarity below which a chunk is considered irrelevant
+ * @param maxDocumentCharacters largest amount of text a single document may contain
  */
 @ConfigurationProperties(prefix = "app.rag")
 public record RagProperties(
@@ -19,6 +20,7 @@ public record RagProperties(
         int defaultTopK,
         int maxTopK,
         int embeddingDimensions,
-        double minScore
+        double minScore,
+        int maxDocumentCharacters
 ) {
 }

@@ -3,6 +3,7 @@ package com.ramesh.knowledge.document;
 import com.ramesh.knowledge.document.dto.ChunkView;
 import com.ramesh.knowledge.document.dto.CreateDocumentRequest;
 import com.ramesh.knowledge.document.dto.DocumentView;
+import com.ramesh.knowledge.document.dto.KnowledgeBaseSummary;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,10 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 /**
  * REST API for managing the knowledge base.
@@ -31,23 +29,23 @@ import java.util.Set;
 @RequestMapping("/api/documents")
 public class DocumentController {
 
-    private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("txt", "md", "markdown");
-
     private final DocumentService documentService;
+    private final DocumentTextExtractor textExtractor;
 
-    public DocumentController(DocumentService documentService) {
+    public DocumentController(DocumentService documentService, DocumentTextExtractor textExtractor) {
         this.documentService = documentService;
+        this.textExtractor = textExtractor;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public DocumentView create(@Valid @RequestBody CreateDocumentRequest request) {
-        return documentService.ingest(request.title(), request.content(), request.sourceName());
+        return documentService.ingest(request.title(), request.content());
     }
 
     /**
-     * Accepts a plain text or Markdown file. Other formats need a parser and are
-     * tracked on the roadmap.
+     * Accepts a text, Markdown, PDF or DOCX file. Text is extracted first, so
+     * the rest of the pipeline never sees a binary format.
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
@@ -57,26 +55,30 @@ public class DocumentController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file is empty");
         }
         String filename = file.getOriginalFilename() == null ? "upload.txt" : file.getOriginalFilename();
-        String extension = extensionOf(filename);
-        if (!SUPPORTED_EXTENSIONS.contains(extension)) {
-            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                    "only .txt and .md files are supported");
-        }
 
         String content;
         try {
-            content = new String(file.getBytes(), StandardCharsets.UTF_8);
+            content = textExtractor.extract(filename, file.getBytes());
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "could not read uploaded file", e);
         }
 
         String documentTitle = title == null || title.isBlank() ? baseName(filename) : title;
-        return documentService.ingest(documentTitle, content, filename);
+        String contentType = file.getContentType() == null || file.getContentType().isBlank()
+                ? MediaType.APPLICATION_OCTET_STREAM_VALUE
+                : file.getContentType();
+        return documentService.ingest(documentTitle, content,
+                new DocumentSource(filename, contentType, file.getSize()));
     }
 
     @GetMapping
     public List<DocumentView> list() {
         return documentService.list();
+    }
+
+    @GetMapping("/summary")
+    public KnowledgeBaseSummary summary() {
+        return documentService.summary();
     }
 
     @GetMapping("/{id}")
@@ -93,11 +95,6 @@ public class DocumentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         documentService.delete(id);
-    }
-
-    private String extensionOf(String filename) {
-        int dot = filename.lastIndexOf('.');
-        return dot < 0 ? "" : filename.substring(dot + 1).toLowerCase(Locale.ROOT);
     }
 
     private String baseName(String filename) {

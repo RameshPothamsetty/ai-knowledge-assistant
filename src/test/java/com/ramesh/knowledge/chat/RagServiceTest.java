@@ -40,7 +40,7 @@ class RagServiceTest {
     @Mock
     private LlmClient llmClient;
 
-    private final RagProperties properties = new RagProperties(800, 120, 4, 20, 256, 0.05);
+    private final RagProperties properties = new RagProperties(800, 120, 4, 20, 256, 0.05, 200_000);
 
     private RagService ragService;
 

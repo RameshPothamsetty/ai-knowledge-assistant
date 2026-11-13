@@ -1,6 +1,9 @@
 package com.ramesh.knowledge.web;
 
+import com.ramesh.knowledge.document.DocumentExtractionException;
+import com.ramesh.knowledge.document.DocumentTooLargeException;
 import com.ramesh.knowledge.document.DuplicateDocumentException;
+import com.ramesh.knowledge.document.UnsupportedDocumentTypeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -48,6 +51,21 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException exception) {
         return build(HttpStatus.PAYLOAD_TOO_LARGE, "uploaded file is too large", List.of());
+    }
+
+    @ExceptionHandler(DocumentTooLargeException.class)
+    public ResponseEntity<Map<String, Object>> handleDocumentTooLarge(DocumentTooLargeException exception) {
+        return build(HttpStatus.PAYLOAD_TOO_LARGE, exception.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(UnsupportedDocumentTypeException.class)
+    public ResponseEntity<Map<String, Object>> handleUnsupportedType(UnsupportedDocumentTypeException exception) {
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, exception.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(DocumentExtractionException.class)
+    public ResponseEntity<Map<String, Object>> handleExtractionFailure(DocumentExtractionException exception) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage(), List.of());
     }
 
     private String describe(FieldError error) {

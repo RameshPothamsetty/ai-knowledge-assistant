@@ -2,6 +2,7 @@ package com.ramesh.knowledge.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ramesh.knowledge.support.DocumentFixtures;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -15,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -158,7 +160,7 @@ class KnowledgeApiIntegrationTest {
     }
 
     @Test
-    void uploadsPlainTextFilesAndRejectsUnsupportedFormats() throws Exception {
+    void uploadsTextPdfAndDocxFilesAndRejectsUnsupportedFormats() throws Exception {
         MockMultipartFile textFile = new MockMultipartFile(
                 "file", "notes.txt", "text/plain",
                 "Docker compose runs the application and a Postgres database.".getBytes(StandardCharsets.UTF_8));
@@ -166,13 +168,70 @@ class KnowledgeApiIntegrationTest {
         mockMvc.perform(multipart("/api/documents/upload").file(textFile))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("notes"))
-                .andExpect(jsonPath("$.sourceName").value("notes.txt"));
+                .andExpect(jsonPath("$.sourceName").value("notes.txt"))
+                .andExpect(jsonPath("$.contentType").value("text/plain"))
+                .andExpect(jsonPath("$.sizeBytes").value(greaterThan(0)));
 
         MockMultipartFile pdfFile = new MockMultipartFile(
-                "file", "paper.pdf", "application/pdf", new byte[]{1, 2, 3});
+                "file", "architecture.pdf", "application/pdf",
+                DocumentFixtures.pdf("The vector store keeps one embedding per chunk."));
 
         mockMvc.perform(multipart("/api/documents/upload").file(pdfFile))
-                .andExpect(status().isUnsupportedMediaType());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("architecture"))
+                .andExpect(jsonPath("$.sourceName").value("architecture.pdf"))
+                .andExpect(jsonPath("$.chunkCount").value(1));
+
+        MockMultipartFile docxFile = new MockMultipartFile(
+                "file", "policy.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                DocumentFixtures.docx("Refunds are accepted within thirty days of purchase."));
+
+        mockMvc.perform(multipart("/api/documents/upload").file(docxFile))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sourceName").value("policy.docx"));
+
+        MockMultipartFile rtfFile = new MockMultipartFile(
+                "file", "legacy.rtf", "application/rtf", new byte[]{1, 2, 3});
+
+        mockMvc.perform(multipart("/api/documents/upload").file(rtfFile))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415));
+
+        MockMultipartFile corruptPdf = new MockMultipartFile(
+                "file", "scan.pdf", "application/pdf", new byte[]{1, 2, 3});
+
+        mockMvc.perform(multipart("/api/documents/upload").file(corruptPdf))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.status").value(422));
+    }
+
+    @Test
+    void rejectsOversizedDocumentsWithPayloadTooLarge() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Huge Notes",
+                                "content", "a".repeat(200_001)))))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.status").value(413))
+                .andExpect(jsonPath("$.message").value(containsString("limit is 200000")));
+    }
+
+    @Test
+    void summarisesTheKnowledgeBase() throws Exception {
+        mockMvc.perform(post("/api/documents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Summary Source",
+                                "content", "Metrics help operators see how retrieval behaves under load."))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/documents/summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documents").value(greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.chunks").value(greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.tokens").value(greaterThanOrEqualTo(1)));
     }
 
     @Test

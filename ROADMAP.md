@@ -26,11 +26,11 @@ Legend: `[x]` done, `[ ]` next.
 - [x] 15. Bean validation and a consistent JSON error body
 - [x] 16. `DELETE /api/documents/{id}` removing chunks first
 - [x] 17. Reject duplicate documents (same title and content) with 409
-- [ ] 18. Size guard for oversized documents with a 413 test
-- [ ] 19. Extract text from PDF uploads with Apache PDFBox
-- [ ] 20. Extract text from DOCX uploads
-- [ ] 21. Keep original filename and content type in a metadata table
-- [ ] 22. Ingestion summary endpoint (documents, chunks, tokens)
+- [x] 18. Size guard for oversized documents with a 413 test
+- [x] 19. Extract text from PDF uploads with Apache PDFBox
+- [x] 20. Extract text from DOCX uploads
+- [x] 21. Keep original filename, content type and size with each document
+- [x] 22. Ingestion summary endpoint (documents, chunks, tokens)
 
 ## Phase 3 — Retrieval
 
@@ -103,4 +103,4 @@ Legend: `[x]` done, `[ ]` next.
 
 ---
 
-Progress: 39 / 76 complete.
+Progress: 44 / 76 complete.

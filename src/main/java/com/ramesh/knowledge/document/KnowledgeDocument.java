@@ -31,6 +31,12 @@ public class KnowledgeDocument {
     @Column(name = "source_name", length = 255)
     private String sourceName;
 
+    @Column(name = "content_type", length = 120)
+    private String contentType;
+
+    @Column(name = "size_bytes", nullable = false)
+    private long sizeBytes;
+
     @Column(name = "chunk_count", nullable = false)
     private int chunkCount;
 
@@ -41,10 +47,13 @@ public class KnowledgeDocument {
         // Required by JPA.
     }
 
-    public KnowledgeDocument(String title, String content, String sourceName, Instant createdAt) {
+    public KnowledgeDocument(String title, String content, String sourceName, String contentType,
+                             long sizeBytes, Instant createdAt) {
         this.title = title;
         this.content = content;
         this.sourceName = sourceName;
+        this.contentType = contentType;
+        this.sizeBytes = sizeBytes;
         this.createdAt = createdAt;
         this.chunkCount = 0;
     }
@@ -63,6 +72,14 @@ public class KnowledgeDocument {
 
     public String getSourceName() {
         return sourceName;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public long getSizeBytes() {
+        return sizeBytes;
     }
 
     public int getChunkCount() {

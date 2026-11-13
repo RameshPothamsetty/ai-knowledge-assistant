@@ -65,8 +65,9 @@ export function ChatThread({
             </span>
             <h2 className="mt-3 text-base font-semibold">Start with a document</h2>
             <p className="mt-1 text-sm leading-relaxed text-muted">
-              Upload a <span className="font-medium text-ink">.txt</span> or{' '}
-              <span className="font-medium text-ink">.md</span> file from the sidebar, or paste text straight in.
+              Upload a <span className="font-medium text-ink">.txt</span>,{' '}
+              <span className="font-medium text-ink">.pdf</span> or{' '}
+              <span className="font-medium text-ink">.docx</span> file from the sidebar, or paste text straight in.
             </p>
             <Button className="mt-4" onClick={onCreateDocument}>
               <FilePlus2 className="size-4" />

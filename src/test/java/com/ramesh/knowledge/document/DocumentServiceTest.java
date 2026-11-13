@@ -1,7 +1,9 @@
 package com.ramesh.knowledge.document;
 
+import com.ramesh.knowledge.config.RagProperties;
 import com.ramesh.knowledge.document.dto.ChunkView;
 import com.ramesh.knowledge.document.dto.DocumentView;
+import com.ramesh.knowledge.document.dto.KnowledgeBaseSummary;
 import com.ramesh.knowledge.embedding.EmbeddingCodec;
 import com.ramesh.knowledge.embedding.HashingEmbeddingService;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +44,8 @@ class DocumentServiceTest {
                 documentRepository,
                 chunkRepository,
                 new ChunkingService(120, 30),
-                new HashingEmbeddingService(64));
+                new HashingEmbeddingService(64),
+                new RagProperties(800, 120, 4, 20, 256, 0.05, 200_000));
     }
 
     @Test
@@ -54,10 +57,12 @@ class DocumentServiceTest {
         DocumentView view = documentService.ingest(
                 "Spring notes",
                 "Spring Boot provides auto configuration. ".repeat(12),
-                "spring-notes.txt");
+                new DocumentSource("spring-notes.txt", "text/plain", 480));
 
         assertThat(view.title()).isEqualTo("Spring notes");
         assertThat(view.sourceName()).isEqualTo("spring-notes.txt");
+        assertThat(view.contentType()).isEqualTo("text/plain");
+        assertThat(view.sizeBytes()).isEqualTo(480);
         assertThat(view.chunkCount()).isGreaterThan(1);
 
         ArgumentCaptor<List<DocumentChunk>> chunksCaptor = ArgumentCaptor.forClass(List.class);
@@ -105,6 +110,31 @@ class DocumentServiceTest {
     }
 
     @Test
+    void rejectsDocumentsAboveTheCharacterLimit() {
+        DocumentService limited = new DocumentService(
+                documentRepository,
+                chunkRepository,
+                new ChunkingService(120, 30),
+                new HashingEmbeddingService(64),
+                new RagProperties(800, 120, 4, 20, 256, 0.05, 50));
+
+        assertThatThrownBy(() -> limited.ingest("Big", "x".repeat(51)))
+                .isInstanceOf(DocumentTooLargeException.class)
+                .hasMessageContaining("limit is 50");
+
+        verifyNoInteractions(documentRepository, chunkRepository);
+    }
+
+    @Test
+    void summarisesTotalsFromTheDatabase() {
+        when(documentRepository.count()).thenReturn(2L);
+        when(chunkRepository.count()).thenReturn(5L);
+        when(chunkRepository.sumTokenCount()).thenReturn(320L);
+
+        assertThat(documentService.summary()).isEqualTo(new KnowledgeBaseSummary(2, 5, 320));
+    }
+
+    @Test
     void deletesChunksBeforeTheDocument() {
         when(documentRepository.existsById(3L)).thenReturn(true);
 
@@ -127,8 +157,8 @@ class DocumentServiceTest {
 
     @Test
     void listsDocumentsNewestFirstAsReportedByTheRepository() {
-        KnowledgeDocument first = new KnowledgeDocument("First", "content", null, Instant.now());
-        KnowledgeDocument second = new KnowledgeDocument("Second", "content", null, Instant.now());
+        KnowledgeDocument first = new KnowledgeDocument("First", "content", null, "text/plain", 7, Instant.now());
+        KnowledgeDocument second = new KnowledgeDocument("Second", "content", null, "text/plain", 7, Instant.now());
         when(documentRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(second, first));
 
         assertThat(documentService.list()).extracting(DocumentView::title)
@@ -137,7 +167,7 @@ class DocumentServiceTest {
 
     @Test
     void returnsChunksInStoredOrder() {
-        KnowledgeDocument document = new KnowledgeDocument("Notes", "content", null, Instant.now());
+        KnowledgeDocument document = new KnowledgeDocument("Notes", "content", null, "text/plain", 7, Instant.now());
         DocumentChunk first = new DocumentChunk(document, 0, "first", "[]", 1);
         DocumentChunk second = new DocumentChunk(document, 1, "second", "[]", 2);
         when(documentRepository.existsById(7L)).thenReturn(true);

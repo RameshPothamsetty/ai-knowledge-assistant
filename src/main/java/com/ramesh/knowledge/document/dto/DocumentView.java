@@ -12,6 +12,8 @@ public record DocumentView(
         Long id,
         String title,
         String sourceName,
+        String contentType,
+        long sizeBytes,
         int chunkCount,
         Instant createdAt
 ) {
@@ -20,6 +22,8 @@ public record DocumentView(
                 document.getId(),
                 document.getTitle(),
                 document.getSourceName(),
+                document.getContentType(),
+                document.getSizeBytes(),
                 document.getChunkCount(),
                 document.getCreatedAt()
         );

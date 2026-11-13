@@ -10,7 +10,7 @@ The whole pipeline runs offline by default — no API key, no external model, no
 
 ## What it does
 
-- **Ingest** pasted text or `.txt` / `.md` uploads.
+- **Ingest** pasted text or `.txt`, `.md`, `.pdf` and `.docx` uploads.
 - **Chunk** documents sentence-aware with configurable size and overlap.
 - **Embed** every chunk and store the vector alongside it.
 - **Retrieve** the closest chunks with cosine similarity, filtered by a relevance threshold.
@@ -87,6 +87,7 @@ This starts PostgreSQL and the application on <http://localhost:8080>.
 | `POST` | `/api/documents` | Create a document from raw text |
 | `POST` | `/api/documents/upload` | Upload a `.txt` / `.md` file (multipart) |
 | `GET` | `/api/documents` | List documents, newest first |
+| `GET` | `/api/documents/summary` | Document, chunk and token totals for the knowledge base |
 | `GET` | `/api/documents/{id}` | Fetch one document |
 | `GET` | `/api/documents/{id}/chunks` | Stored chunks in order, used by the preview drawer |
 | `DELETE` | `/api/documents/{id}` | Delete a document and its chunks |
@@ -94,7 +95,7 @@ This starts PostgreSQL and the application on <http://localhost:8080>.
 | `GET` | `/api/meta` | Active embedding model, chunking and top-k limits |
 | `GET` | `/actuator/health` | Health probe |
 
-Ingesting a document whose title **and** content already exist returns `409 Conflict`, so the same text cannot flood retrieval with duplicate chunks. A different title or different content is accepted.
+Ingesting a document whose title **and** content already exist returns `409 Conflict`, so the same text cannot flood retrieval with duplicate chunks. A different title or different content is accepted. Text above `max-document-characters` returns `413 Payload Too Large`, unsupported extensions `415 Unsupported Media Type`, and files whose text cannot be extracted — corrupt files or scans without a text layer — `422 Unprocessable Entity`.
 
 ### Example
 
@@ -108,7 +109,15 @@ curl -X POST http://localhost:8080/api/documents \
 ```
 
 ```json
-{ "id": 1, "title": "Spring Boot Guide", "sourceName": null, "chunkCount": 1, "createdAt": "2026-11-05T10:30:00Z" }
+{
+  "id": 1,
+  "title": "Spring Boot Guide",
+  "sourceName": null,
+  "contentType": "text/plain",
+  "sizeBytes": 146,
+  "chunkCount": 1,
+  "createdAt": "2026-11-05T10:30:00Z"
+}
 ```
 
 ```bash
@@ -158,6 +167,7 @@ Errors are JSON too:
 | `app.rag.max-top-k` | — | `20` | Server-side cap for `topK` |
 | `app.rag.embedding-dimensions` | — | `256` | Vector size of the local embedder |
 | `app.rag.min-score` | — | `0.05` | Minimum cosine similarity to keep a chunk |
+| `app.rag.max-document-characters` | — | `200000` | Largest amount of text one document may contain |
 
 Secrets are never committed: see [`.env.example`](.env.example) for the variables Docker reads. `.env` is git-ignored.
 
@@ -171,7 +181,7 @@ The default `ExtractiveLlmClient` is deliberately honest: it selects the retriev
 
 - The local embedder is **lexical**, not semantic: it matches shared words and stemming, so paraphrased questions can miss relevant passages. Hosted embeddings are a roadmap item.
 - Similarity is computed in memory over all chunks. Fine for thousands of chunks, not for millions (pgvector is on the roadmap).
-- Only plain text and Markdown are accepted; PDF and DOCX need parsers.
+- PDF and DOCX text is extracted, but scans without a text layer need OCR, which is not wired in; images and embedded objects inside DOCX files are ignored.
 - One request at a time per answer: no streaming or conversation memory yet.
 - Chat history lives in the browser's `localStorage`, not in a database.
 
@@ -181,7 +191,7 @@ The default `ExtractiveLlmClient` is deliberately honest: it selects the retriev
 mvn test
 ```
 
-47 tests, no network or API keys required:
+59 tests, no network or API keys required:
 
 | Suite | What it covers |
 | --- | --- |
@@ -189,10 +199,11 @@ mvn test
 | `HashingEmbeddingServiceTest` | determinism, unit norm, related-vs-unrelated ranking, stop words |
 | `EmbeddingCodecTest` | JSON round-trip and malformed payloads |
 | `VectorSearchServiceTest` | ranking, threshold filtering, top-k, cosine edge cases |
-| `DocumentServiceTest` | embed-and-persist, validation, duplicate rejection, cascade delete, listing, chunk order |
+| `DocumentServiceTest` | embed-and-persist, validation, duplicate rejection, size limit, cascade delete, listing, chunk order, summary |
+| `DocumentTextExtractorTest` | UTF-8 text and Markdown, PDF and DOCX extraction, corrupt files, scans without text, unsupported extensions |
 | `RagServiceTest` | grounded answer, source metadata, no-context path, top-k clamping |
 | `ExtractiveLlmClientTest` | citation selection and deterministic output |
-| `KnowledgeApiIntegrationTest` | full MockMvc flow: ingest → ask → list → delete → 404, duplicate 409, chunk preview, upload paths, `/api/meta` |
+| `KnowledgeApiIntegrationTest` | full MockMvc flow: ingest → ask → list → delete → 404, duplicate 409, chunk preview, `413`/`415`/`422` paths, PDF/DOCX uploads, summary, `/api/meta` |
 
 ## Project layout
 

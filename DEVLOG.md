@@ -1,5 +1,11 @@
 # Devlog
 
+## 2026-11-13
+
+- Finished Phase 2: uploads now accept `.pdf` (Apache PDFBox) and `.docx` (Apache POI) alongside text and Markdown, with extraction kept in `DocumentTextExtractor` so ingestion stays format-agnostic.
+- Enforced one document size limit for both pasted text and extracted files, returning `413` with the actual character count; unsupported formats return `415` and unreadable or scanned files return `422` with a message that explains what to fix.
+- Recorded source filename, MIME type and byte size with every document, and added `GET /api/documents/summary` for document, chunk and token totals; 59 tests passing.
+
 ## 2026-11-06
 
 - Rejected duplicate documents at ingestion: a matching title and content now returns `409 Conflict` before any chunk is embedded, with unit and MockMvc coverage; 44 tests passing.

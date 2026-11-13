@@ -154,8 +154,8 @@ export default function App() {
 
   function handleUpload(file: File) {
     const name = file.name.toLowerCase();
-    if (!/\.(txt|md|markdown)$/.test(name)) {
-      showToast('Only .txt and .md files are supported.', 'error');
+    if (!/\.(txt|md|markdown|pdf|docx)$/.test(name)) {
+      showToast('Only .txt, .md, .pdf and .docx files are supported.', 'error');
       return;
     }
     if (file.size > MAX_UPLOAD_BYTES) {

@@ -21,6 +21,9 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, Lo
 
     List<DocumentChunk> findByDocumentIdOrderByChunkIndexAsc(Long documentId);
 
+    @Query("select coalesce(sum(c.tokenCount), 0) from DocumentChunk c")
+    long sumTokenCount();
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from DocumentChunk c where c.document.id = :documentId")
     void deleteByDocumentId(@Param("documentId") Long documentId);

@@ -11,8 +11,9 @@ public record CreateDocumentRequest(
         @Size(max = 200, message = "title must be at most 200 characters")
         String title,
 
+        // The size limit is enforced by the ingestion service, which also guards
+        // text extracted from uploads; that keeps one limit and one 413 response.
         @NotBlank(message = "content is required")
-        @Size(max = 200_000, message = "content must be at most 200000 characters")
         String content,
 
         @Size(max = 255, message = "sourceName must be at most 255 characters")

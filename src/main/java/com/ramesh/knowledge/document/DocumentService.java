@@ -1,7 +1,9 @@
 package com.ramesh.knowledge.document;
 
+import com.ramesh.knowledge.config.RagProperties;
 import com.ramesh.knowledge.document.dto.ChunkView;
 import com.ramesh.knowledge.document.dto.DocumentView;
+import com.ramesh.knowledge.document.dto.KnowledgeBaseSummary;
 import com.ramesh.knowledge.embedding.EmbeddingCodec;
 import com.ramesh.knowledge.embedding.EmbeddingService;
 import org.springframework.stereotype.Service;
@@ -27,21 +29,33 @@ public class DocumentService {
     private final DocumentChunkRepository chunkRepository;
     private final ChunkingService chunkingService;
     private final EmbeddingService embeddingService;
+    private final RagProperties properties;
 
     public DocumentService(KnowledgeDocumentRepository documentRepository,
                            DocumentChunkRepository chunkRepository,
                            ChunkingService chunkingService,
-                           EmbeddingService embeddingService) {
+                           EmbeddingService embeddingService,
+                           RagProperties properties) {
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
         this.chunkingService = chunkingService;
         this.embeddingService = embeddingService;
+        this.properties = properties;
+    }
+
+    public DocumentView ingest(String title, String content) {
+        return ingest(title, content, DocumentSource.pasted(content == null ? "" : content));
     }
 
     @Transactional
-    public DocumentView ingest(String title, String content, String sourceName) {
+    public DocumentView ingest(String title, String content, DocumentSource source) {
         String cleanTitle = requireText(title, "title");
         String cleanContent = requireText(content, "content");
+
+        int limit = properties.maxDocumentCharacters();
+        if (cleanContent.length() > limit) {
+            throw new DocumentTooLargeException(cleanContent.length(), limit);
+        }
 
         if (documentRepository.existsByTitleAndContent(cleanTitle, cleanContent)) {
             throw new DuplicateDocumentException(cleanTitle);
@@ -52,8 +66,13 @@ public class DocumentService {
             throw new IllegalArgumentException("content does not contain usable text");
         }
 
-        KnowledgeDocument document = documentRepository.save(
-                new KnowledgeDocument(cleanTitle, cleanContent, blankToNull(sourceName), Instant.now()));
+        KnowledgeDocument document = documentRepository.save(new KnowledgeDocument(
+                cleanTitle,
+                cleanContent,
+                source == null ? null : blankToNull(source.filename()),
+                source == null ? null : blankToNull(source.contentType()),
+                source == null ? 0 : source.sizeBytes(),
+                Instant.now()));
 
         List<DocumentChunk> entities = new ArrayList<>(chunks.size());
         for (int index = 0; index < chunks.size(); index++) {
@@ -78,6 +97,19 @@ public class DocumentService {
         return documentRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(DocumentView::from)
                 .toList();
+    }
+
+    /**
+     * Totals for the whole knowledge base, cheap enough to show in a header.
+     * "Tokens" counts the words stored across chunks, matching what the chunk
+     * table records per row.
+     */
+    @Transactional(readOnly = true)
+    public KnowledgeBaseSummary summary() {
+        return new KnowledgeBaseSummary(
+                documentRepository.count(),
+                chunkRepository.count(),
+                chunkRepository.sumTokenCount());
     }
 
     /**

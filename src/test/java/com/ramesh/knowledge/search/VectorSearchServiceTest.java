@@ -83,7 +83,7 @@ class VectorSearchServiceTest {
     }
 
     private KnowledgeDocument document(long id, String title) {
-        KnowledgeDocument document = new KnowledgeDocument(title, "content", null, Instant.now());
+        KnowledgeDocument document = new KnowledgeDocument(title, "content", null, "text/plain", 7, Instant.now());
         ReflectionTestUtils.setField(document, "id", id);
         return document;
     }
