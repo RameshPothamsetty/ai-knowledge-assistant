@@ -5,8 +5,8 @@ import com.ramesh.knowledge.chat.dto.AnswerResponse;
 import com.ramesh.knowledge.chat.dto.SourceSnippet;
 import com.ramesh.knowledge.config.RagProperties;
 import com.ramesh.knowledge.embedding.EmbeddingService;
+import com.ramesh.knowledge.search.ChunkSearch;
 import com.ramesh.knowledge.search.ScoredChunk;
-import com.ramesh.knowledge.search.VectorSearchService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Service;
@@ -38,7 +38,7 @@ public class RagService {
     private static final int SNIPPET_LENGTH = 320;
 
     private final EmbeddingService embeddingService;
-    private final VectorSearchService vectorSearchService;
+    private final ChunkSearch chunkSearch;
     private final LlmClient llmClient;
     private final RagPromptBuilder promptBuilder;
     private final RagProperties properties;
@@ -46,14 +46,14 @@ public class RagService {
     private final MeterRegistry meterRegistry;
 
     public RagService(EmbeddingService embeddingService,
-                      VectorSearchService vectorSearchService,
+                      ChunkSearch chunkSearch,
                       LlmClient llmClient,
                       RagPromptBuilder promptBuilder,
                       RagProperties properties,
                       ConversationStore conversationStore,
                       MeterRegistry meterRegistry) {
         this.embeddingService = embeddingService;
-        this.vectorSearchService = vectorSearchService;
+        this.chunkSearch = chunkSearch;
         this.llmClient = llmClient;
         this.promptBuilder = promptBuilder;
         this.properties = properties;
@@ -149,7 +149,7 @@ public class RagService {
 
     private List<ScoredChunk> retrieve(String question, Integer requestedTopK, Long documentId) {
         float[] questionVector = embeddingService.embed(question);
-        return vectorSearchService.search(
+        return chunkSearch.search(
                 question, questionVector, resolveTopK(requestedTopK), properties.minScore(), documentId);
     }
 

@@ -15,12 +15,12 @@ import java.util.List;
  * question text is available, ranked by a blend of cosine and a BM25 keyword
  * score.
  *
- * <p>This is intentionally simple and database portable. The corpus for a
- * personal knowledge assistant is small (thousands of chunks), and the roadmap
- * tracks moving the scan into Postgres with pgvector once that stops being true.
+ * <p>This is intentionally simple and database portable, and it stays the
+ * default on H2. When the {@code postgres} profile is active,
+ * {@link PgVectorSearchService} replaces it with an index-backed query.
  */
 @Service
-public class VectorSearchService {
+public class VectorSearchService implements ChunkSearch {
 
     private final DocumentChunkRepository chunkRepository;
     private final VectorCache vectorCache;
@@ -50,6 +50,7 @@ public class VectorSearchService {
      * @param documentId when set, only chunks of that document are considered;
      *                   {@code null} searches the whole knowledge base
      */
+    @Override
     @Transactional(readOnly = true)
     public List<ScoredChunk> search(String question, float[] queryVector, int topK,
                                     double minScore, Long documentId) {

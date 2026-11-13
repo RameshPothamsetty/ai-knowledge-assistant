@@ -1,6 +1,8 @@
 services:
   db:
-    image: postgres:16-alpine
+    # pgvector ships in this image; the postgres profile installs the
+    # extension, mirrors embeddings into a vector column and builds an HNSW index.
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-knowledge}
       POSTGRES_USER: ${POSTGRES_USER:-knowledge}
