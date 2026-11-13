@@ -19,6 +19,8 @@ The whole pipeline runs offline by default — no API key, no external model, no
 
 ## Architecture
 
+![Component diagram](docs/architecture.png)
+
 ```
 POST /api/documents ──► DocumentService ──► ChunkingService ──► EmbeddingService
                               │                                      │
@@ -39,8 +41,8 @@ POST /api/ask ──► RagService ──► embed question ──► VectorSear
 | --- | --- | --- |
 | Language / runtime | Java 21 | LTS, records, text blocks, pattern matching |
 | Backend | Spring Boot 3.5 (Web, Data JPA, Validation, Actuator) | Standard, testable, production-shaped |
-| Database | H2 (dev), PostgreSQL (compose/CI target) | Zero-setup locally, realistic deployment |
-| Retrieval | Cosine similarity over stored vectors | Portable, no extensions needed |
+| Database | H2 (dev), PostgreSQL + pgvector (compose/CI target) | Zero-setup locally, realistic deployment |
+| Retrieval | Cosine + BM25; in-memory scan on H2, HNSW index on Postgres | Portable by default, index-backed at scale |
 | Embeddings | Local feature hashing (256 dims, L2 normalised) | Deterministic, offline, free |
 | Answering | Extractive answerer behind `LlmClient` | Demonstrates grounding without a key |
 | UI | React 19 + Vite + TypeScript + Tailwind CSS | Typed against the API, still one deployable artefact |
@@ -84,7 +86,7 @@ cp .env.example .env      # then change the password
 docker compose up --build
 ```
 
-This starts PostgreSQL and the application on <http://localhost:8080>.
+This starts PostgreSQL (the pgvector image) and the application on <http://localhost:8080>. On startup the `postgres` profile installs the `vector` extension, mirrors embeddings into a `vector(256)` column and builds an HNSW index, so retrieval runs in the database instead of in memory.
 
 ## API
 
@@ -205,12 +207,14 @@ Secrets are never committed: see [`.env.example`](.env.example) for the variable
 
 Retrieval ranks by a blend of cosine similarity and Okapi BM25: cosine remains the relevance gate, while the keyword score weights rare terms more heavily, so a question mentioning a specific identifier is not drowned out by common words. Decoded vectors are cached in memory, and repeated boilerplate is dropped at chunking time so it cannot claim several retrieval slots.
 
+On the `postgres` profile that scan is replaced by pgvector: a startup task installs the extension, mirrors each chunk's JSON embedding into a `vector(256)` column through a trigger, and builds an HNSW cosine index. Postgres selects the candidate pool by distance, and the same BM25 blend re-ranks it in Java, so the scoring behaves the same on both profiles. H2 keeps the portable in-memory path, which needs no extensions. Benchmarked on the test corpus of 4,000 chunks (top-k 5, median of 10 runs), the in-memory scan took **312–430 ms** per question against **3.5–7.3 ms** with the HNSW index across runs.
+
 The default `ExtractiveLlmClient` is deliberately honest: it selects the retrieved sentences with the highest term overlap with the question and appends citation markers. It cannot hallucinate, because it only re-uses retrieved text. Swapping in a hosted model is a matter of providing another `LlmClient` bean — the prompt already contains grounding rules, citation requirements and a "say you don't know" instruction. That is tracked on the roadmap.
 
 ### Current limitations
 
 - The local embedder is **lexical**, not semantic: it matches shared words and stemming, so paraphrased questions can miss relevant passages. Hosted embeddings are a roadmap item.
-- Similarity is computed in memory over all chunks. Fine for thousands of chunks, not for millions (pgvector is on the roadmap).
+- The index-backed path exists only on Postgres, where the `vector` extension must be installable; H2 keeps the in-memory scan. The pgvector query re-ranks only a candidate pool, so its ordering can differ slightly from a full-corpus scan.
 - PDF and DOCX text is extracted, but scans without a text layer need OCR, which is not wired in; images and embedded objects inside DOCX files are ignored.
 - Conversation memory is in process memory: a restart forgets it and a second replica would not share it.
 - Streaming uses the offline client's word-splitting; a hosted model can stream its own tokens through the same `LlmClient.stream` hook.
@@ -223,7 +227,7 @@ The default `ExtractiveLlmClient` is deliberately honest: it selects the retriev
 mvn test
 ```
 
-94 tests, no network or API keys required:
+96 tests, no network or API keys required. The two Postgres suites need Docker (Testcontainers) and are skipped automatically when no daemon is available.
 
 | Suite | What it covers |
 | --- | --- |
@@ -238,9 +242,33 @@ mvn test
 | `RagServiceTest` | grounded answer, source metadata, no-context path, top-k clamping, style instructions, conversation turns, injection sanitising, streaming |
 | `ExtractiveLlmClientTest` | citation selection and deterministic output |
 | `KnowledgeApiIntegrationTest` | full MockMvc flow: ingest → ask → list → delete → 404, duplicate 409, chunk preview, `413`/`415`/`422` paths, PDF/DOCX uploads, summary, pagination, reindex, document-scoped questions, SSE streaming, feedback, correlation ids, timers, OpenAPI, `/api/meta` |
-| `RateLimitIntegrationTest` | per-client limit on `/api/ask`, `429` with `Retry-After`, other endpoints unaffected |
+| `RateLimitIntegrationTest` | per-client limit on `/api/ask`, `429` with `Retry-After`, trailing-slash bypass, other endpoints unaffected |
+| `PostgresIntegrationTest` | full flow against real Postgres with pgvector: ingest, vector mirroring, HNSW index, scoped ask, page, reindex, delete |
+| `RetrievalBenchmarkTest` | seeds 4,000 chunks and times the in-memory scan against the HNSW index |
 
 `mvn verify` also runs a JaCoCo check that fails the build when bundle instruction coverage drops below 80%.
+
+### Load test
+
+`scripts/load-test.js` drives `/api/ask` with k6. Raise the rate limit first, or the script measures `429`s:
+
+```bash
+APP_RATE_LIMIT_REQUESTS_PER_MINUTE=1000000 java -jar target/ai-knowledge-assistant-0.1.0-SNAPSHOT.jar
+./scripts/load-demo-data.sh
+docker run --rm -i -e BASE_URL=http://host.docker.internal:8080 \
+  grafana/k6 run - < scripts/load-test.js
+```
+
+Recorded run on a Windows laptop against the H2 profile with three sample documents, 10 virtual users for 20 seconds:
+
+| Metric | Result |
+| --- | --- |
+| Requests | 22,423 (1,121 req/s) |
+| Failed requests | 0.00% |
+| p50 / p95 latency | 6.9 ms / 18.5 ms |
+| Checks passed | 100% |
+
+`VUS` and `DURATION` are overridable with `-e`; thresholds fail the run above 1% errors or a p95 over 500 ms.
 
 ## Project layout
 
@@ -250,7 +278,7 @@ src/main/java/com/ramesh/knowledge
 ├── config/       typed RAG properties
 ├── document/     entities, repositories, chunking, ingestion, /api/documents
 ├── embedding/    embedding abstraction, local hashing model, vector codec
-├── search/       hybrid retrieval, BM25, vector cache
+├── search/       retrieval: in-memory scan, pgvector + HNSW, BM25, vector cache
 └── web/          JSON error handling, correlation id and rate-limit filters
 src/main/resources
 └── application.yml
@@ -259,13 +287,13 @@ frontend/            React + Vite SPA, built into src/main/resources/static
 ├── src/api.ts       typed API client
 └── vite.config.ts   build target and dev proxy
 samples/             three short documents the demo script uploads
-scripts/             load-demo-data.sh
-docs/                architecture diagram and design write-up
+scripts/             load-demo-data.sh, load-test.js
+docs/                architecture diagram (markdown + PNG) and design write-up
 ```
 
 ## Documentation
 
 - [ROADMAP.md](ROADMAP.md) — 76 small tasks, easiest to hardest, with progress checkboxes
 - [DEVLOG.md](DEVLOG.md) — one entry per working session
-- [docs/architecture.md](docs/architecture.md) — component diagram and request flow
+- [docs/architecture.md](docs/architecture.md) — component diagram (also as `docs/architecture.png`) and request flow
 - [docs/blog-post.md](docs/blog-post.md) — why the pipeline is offline-first

@@ -2,6 +2,13 @@
 
 ## 2026-11-13
 
+- Moved retrieval into Postgres: `ChunkSearch` is now the seam between the in-memory scan and a pgvector-backed search, active on the `postgres` profile. A startup task installs the extension, adds a `vector(256)` column, mirrors the existing JSON embeddings through a trigger and builds an HNSW cosine index, so ingestion code and the H2 path are untouched. Postgres picks the candidate pool by distance and the same BM25 blend re-ranks it in Java; the ordering can differ slightly from a full scan, which is documented.
+- Benchmarked both paths on 4,000 seeded chunks (top-k 5, median of 10 runs): 312–430 ms for the in-memory scan against 3.5–7.3 ms through the HNSW index. The numbers are printed by `RetrievalBenchmarkTest` rather than asserted, since they depend on the machine.
+- Added a Testcontainers integration test against real Postgres with pgvector covering ingest, vector mirroring, index creation, document-scoped questions, pagination, reindex and delete. Docker 29 rejects the API version negotiated by Testcontainers 1.x, so the project pins Testcontainers 2.0.5, whose modules were renamed to `testcontainers-postgresql` / `testcontainers-junit-jupiter`.
+- Added `scripts/load-test.js` and recorded a k6 run in the README: 22,423 requests at 1,121 req/s over 20 seconds, p95 18.5 ms, no failures. k6 itself is not installed here, so the run used the official Docker image against the H2 profile with the rate limiter raised.
+- Closed the trailing-slash gap in the rate limiter: `/api/ask/` now counts against the same window as `/api/ask`.
+- Exported the architecture diagram to `docs/architecture.png` and switched docker-compose to the pgvector image. 96 tests passing.
+
 - Picked up Phase 3 at task 29: `POST /api/ask` now takes an optional `documentId` that narrows retrieval to one document, fetched with its own eager query so a scoped question never scans the corpus; validated as positive and covered in unit and MockMvc tests, 63 tests passing.
 - Reworked ranking as a blend of cosine similarity and Okapi BM25 (`app.rag.hybrid-weight`, default 0.75). Cosine stays the relevance gate, so `min-score` keeps its meaning, while BM25's inverse document frequency lifts chunks that match rare identifiers. Tokenisation moved into a shared `Terms` helper so the embedder and the keyword scorer agree on stems and stop words; 81 tests passing.
 - Cached decoded chunk vectors in a bounded map, invalidated per document on delete and wholesale on reindex, so repeated questions stop re-parsing the stored JSON.

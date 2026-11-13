@@ -46,8 +46,8 @@ Legend: `[x]` done, `[ ]` next.
 - [x] 32. Reindex endpoint to re-embed documents after a model change
 - [x] 33. Chunk deduplication for repeated boilerplate text
 - [x] 34. Pagination for large knowledge bases
-- [ ] 35. Move similarity search into Postgres with pgvector
-- [ ] 36. HNSW index and a benchmark against the in-memory scan
+- [x] 35. Move similarity search into Postgres with pgvector
+- [x] 36. HNSW index and a benchmark against the in-memory scan
 
 ## Phase 4 — Answer generation
 
@@ -75,8 +75,8 @@ Legend: `[x]` done, `[ ]` next.
 - [x] 55. Request logging with a correlation id
 - [x] 56. Micrometer timers for retrieval and generation latency
 - [x] 57. Rate limiting for `/api/ask`
-- [ ] 58. Testcontainers integration test against Postgres
-- [ ] 59. k6 load test with results recorded in the README
+- [x] 58. Testcontainers integration test against Postgres
+- [x] 59. k6 load test with results recorded in the README
 - [x] 60. JaCoCo coverage gate in CI
 - [x] 61. UI error page when the API is unreachable
 
@@ -103,4 +103,4 @@ Legend: `[x]` done, `[ ]` next.
 
 ---
 
-Progress: 65 / 76 complete.
+Progress: 69 / 76 complete.

@@ -1,5 +1,7 @@
 # Architecture
 
+![Component diagram](architecture.png)
+
 A single Spring Boot application serves both the REST API and the built React
 bundle. Everything below runs inside one process; the only external dependency is
 a database, and even that can be the in-memory H2 profile.
@@ -69,16 +71,26 @@ documents, splits the text into overlapping chunks, drops repeated boilerplate,
 embeds each chunk and stores the vectors as JSON arrays next to the chunk text.
 
 The raw document text is kept: reindexing (`POST /api/documents/reindex`) rebuilds
-every chunk from it, which is what a change of embedding model requires.
+every chunk from it, which is what a change of embedding model requires. On
+Postgres, re-inserted chunks get their pgvector column filled by the same trigger,
+so both representations stay in step without ingestion knowing about either.
 
 ## Answering
 
 `POST /api/ask` embeds the question with the same model used for the chunks and
-asks `VectorSearchService` for candidates. Retrieval gates on cosine similarity and
-ranks by a blend with Okapi BM25, so rare terms are not drowned out by common
-ones. Decoded vectors are cached between requests and invalidated when documents
-are deleted or reindexed. An optional `documentId` narrows the query in SQL rather
-than filtering in memory.
+asks the active `ChunkSearch` implementation for candidates. Retrieval gates on
+cosine similarity and ranks by a blend with Okapi BM25, so rare terms are not
+drowned out by common ones. An optional `documentId` narrows the query rather
+than filtering afterwards.
+
+Two implementations sit behind that seam. On H2, `VectorSearchService` scans
+every chunk in memory and caches decoded vectors, which is simple and portable
+but grows with the corpus. On the `postgres` profile, `PgVectorSearchService`
+lets the HNSW index choose the nearest candidates and re-ranks that pool with
+BM25; `PgVectorBootstrap` installs the extension, mirrors the JSON embedding into
+a `vector(256)` column through a trigger and builds the index at startup. On
+4,000 chunks a recorded difference was 312–430 ms versus 3.5–7.3 ms per
+question, depending on the run.
 
 Retrieved chunks are rendered into a prompt with numbered passages, the requested
 length and tone, and the last few turns of the conversation. Instruction-like lines
