@@ -40,12 +40,12 @@ Legend: `[x]` done, `[ ]` next.
 - [x] 26. Configurable top-k, minimum score and maximum top-k
 - [x] 27. Rounded scores and display snippets in the API response
 - [x] 28. Unit tests for ranking, threshold and edge cases
-- [ ] 29. Optional document filter on `/api/ask`
-- [ ] 30. Hybrid scoring: blend cosine with a BM25 keyword score
-- [ ] 31. Cache decoded vectors in memory instead of re-parsing JSON
-- [ ] 32. Reindex endpoint to re-embed documents after a model change
-- [ ] 33. Chunk deduplication for repeated boilerplate text
-- [ ] 34. Pagination for large knowledge bases
+- [x] 29. Optional document filter on `/api/ask`
+- [x] 30. Hybrid scoring: blend cosine with a BM25 keyword score
+- [x] 31. Cache decoded vectors in memory instead of re-parsing JSON
+- [x] 32. Reindex endpoint to re-embed documents after a model change
+- [x] 33. Chunk deduplication for repeated boilerplate text
+- [x] 34. Pagination for large knowledge bases
 - [ ] 35. Move similarity search into Postgres with pgvector
 - [ ] 36. HNSW index and a benchmark against the in-memory scan
 
@@ -61,24 +61,24 @@ Legend: `[x]` done, `[ ]` next.
 - [ ] 44. Hosted embeddings (OpenAI) behind `EmbeddingService`, with re-embedding
 - [ ] 45. Ollama profile for fully local generation
 - [ ] 46. Gemini provider
-- [ ] 47. Stream answers token by token over SSE
-- [ ] 48. Multi-turn conversation memory
-- [ ] 49. Configurable answer length and tone
-- [ ] 50. Guard against prompt injection inside uploaded documents
-- [ ] 51. Store user feedback (helpful / not helpful) per answer
+- [x] 47. Stream answers token by token over SSE
+- [x] 48. Multi-turn conversation memory
+- [x] 49. Configurable answer length and tone
+- [x] 50. Guard against prompt injection inside uploaded documents
+- [x] 51. Store user feedback (helpful / not helpful) per answer
 
 ## Phase 5 — API and quality
 
 - [x] 52. MockMvc integration test for ingest → ask → delete
 - [x] 53. Integration tests for validation, upload and 404 paths
-- [ ] 54. OpenAPI documentation with springdoc
-- [ ] 55. Request logging with a correlation id
-- [ ] 56. Micrometer timers for retrieval and generation latency
-- [ ] 57. Rate limiting for `/api/ask`
+- [x] 54. OpenAPI documentation with springdoc
+- [x] 55. Request logging with a correlation id
+- [x] 56. Micrometer timers for retrieval and generation latency
+- [x] 57. Rate limiting for `/api/ask`
 - [ ] 58. Testcontainers integration test against Postgres
 - [ ] 59. k6 load test with results recorded in the README
-- [ ] 60. JaCoCo coverage gate in CI
-- [ ] 61. UI error page when the API is unreachable
+- [x] 60. JaCoCo coverage gate in CI
+- [x] 61. UI error page when the API is unreachable
 
 ## Phase 6 — Frontend
 
@@ -95,12 +95,12 @@ Legend: `[x]` done, `[ ]` next.
 
 - [ ] 70. Deploy to a managed host with managed Postgres
 - [ ] 71. CD workflow deploying main after CI passes
-- [ ] 72. Architecture diagram image in `docs/`
+- [x] 72. Architecture diagram image in `docs/`
 - [ ] 73. Demo GIF in the README
-- [ ] 74. Sample documents and a "load demo data" script
-- [ ] 75. Performance pass: index chunk lookups by document
-- [ ] 76. Short blog post on the design decisions
+- [x] 74. Sample documents and a "load demo data" script
+- [x] 75. Performance pass: index chunk lookups by document
+- [x] 76. Short blog post on the design decisions
 
 ---
 
-Progress: 44 / 76 complete.
+Progress: 65 / 76 complete.
