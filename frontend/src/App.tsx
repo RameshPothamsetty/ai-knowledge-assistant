@@ -242,6 +242,22 @@ export default function App() {
           <ThemeToggle />
         </header>
 
+        {documentsQuery.isError && (
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-3 border-b border-danger/30 bg-danger-soft px-4 py-2 text-xs text-danger"
+          >
+            <span>Cannot reach the API. Check that the application is running, then retry.</span>
+            <button
+              type="button"
+              onClick={() => void queryClient.invalidateQueries()}
+              className="shrink-0 font-semibold underline underline-offset-2"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         <ChatThread
           messages={messages}
           documents={documents}
