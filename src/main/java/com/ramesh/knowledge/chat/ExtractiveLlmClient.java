@@ -27,7 +27,6 @@ public class ExtractiveLlmClient implements LlmClient {
 
     private static final Pattern SENTENCE_SPLIT = Pattern.compile("(?<=[.!?])\\s+|\\R+");
     private static final Pattern WORD = Pattern.compile("[a-z0-9]+");
-    private static final int MAX_SENTENCES = 3;
 
     @Override
     public String complete(LlmRequest request) {
@@ -55,7 +54,7 @@ public class ExtractiveLlmClient implements LlmClient {
         // are dropped even when their chunk was retrieved.
         List<Sentence> selected = candidates.stream()
                 .filter(candidate -> candidate.score() > 0)
-                .limit(MAX_SENTENCES)
+                .limit(request.style().length().maxSentences())
                 .toList();
 
         if (selected.isEmpty()) {

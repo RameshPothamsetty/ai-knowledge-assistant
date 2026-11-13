@@ -4,9 +4,11 @@ import java.util.List;
 
 /**
  * Answer returned by the RAG pipeline, including the sources it was grounded on
- * so the user can verify the claim instead of trusting it.
+ * so the user can verify the claim instead of trusting it. The {@code answerId}
+ * is what feedback votes refer to.
  */
 public record AnswerResponse(
+        String answerId,
         String answer,
         String model,
         List<SourceSnippet> sources,
