@@ -22,6 +22,9 @@
         <pdfbox.version>3.0.8</pdfbox.version>
         <poi.version>5.5.1</poi.version>
         <springdoc.version>2.8.9</springdoc.version>
+        <!-- Newer than the Boot BOM default: Docker 29 rejects the API version
+             negotiated by the docker-java bundled with Testcontainers 1.x. -->
+        <testcontainers.version>2.0.5</testcontainers.version>
         <jacoco.version>0.8.13</jacoco.version>
         <!-- Slightly below the current measured coverage, so the gate catches a
              real regression without failing on every new line. -->
@@ -78,6 +81,23 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
