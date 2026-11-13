@@ -7,6 +7,7 @@ import com.ramesh.knowledge.document.UnsupportedDocumentTypeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -31,6 +32,11 @@ public class ApiExceptionHandler {
                 .map(this::describe)
                 .toList();
         return build(HttpStatus.BAD_REQUEST, "validation failed", details);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadableBody(HttpMessageNotReadableException exception) {
+        return build(HttpStatus.BAD_REQUEST, "malformed request body", List.of());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -79,6 +85,10 @@ public class ApiExceptionHandler {
         body.put("error", status.getReasonPhrase());
         body.put("message", message);
         body.put("details", details);
+        String requestId = org.slf4j.MDC.get(CorrelationIdFilter.MDC_KEY);
+        if (requestId != null) {
+            body.put("requestId", requestId);
+        }
         return ResponseEntity.status(status).body(body);
     }
 }
