@@ -25,7 +25,7 @@
         <!-- Newer than the Boot BOM default: Docker 29 rejects the API version
              negotiated by the docker-java bundled with Testcontainers 1.x. -->
         <testcontainers.version>2.0.5</testcontainers.version>
-        <jacoco.version>0.8.13</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <!-- Slightly below the current measured coverage, so the gate catches a
              real regression without failing on every new line. -->
         <jacoco.minimum-coverage>0.80</jacoco.minimum-coverage>
